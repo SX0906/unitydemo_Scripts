@@ -90,4 +90,18 @@ public class EnemySkillManager : MonoBehaviour
             return Mathf.Max(0f, end - Time.time);
         return 0f;
     }
+
+    /// <summary>是否有技能冷却完毕（忽略距离）</summary>
+    public bool HasAnySkillReadyIgnoreDistance(Transform self, Transform target)
+    {
+        if (target == null || skillPool == null) return false;
+        foreach (var s in skillPool)
+        {
+            if (s == null || !s.isAvailable) continue;
+            if (cooldownEndTimes.TryGetValue(s.skillID, out float end) && Time.time < end)
+                continue;
+            return true;
+        }
+        return false;
+    }
 }

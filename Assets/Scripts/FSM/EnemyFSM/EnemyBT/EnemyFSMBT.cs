@@ -197,7 +197,6 @@ public class EnemyFSMBT
 {
     public BehaviorTree BuildTree(EnemyFSM enemyFSM)
     {
-        // 技能管理器引用
         EnemySkillManager skillMgr = enemyFSM.GetComponent<EnemySkillManager>();
 
         // ===== 默认：待机 =====
@@ -207,13 +206,11 @@ public class EnemyFSMBT
             return BTNodeState.Success;
         });
 
-        // ===== ★ 攻击序列：BT 直接选技能 → 切状态 =====
+        // ===== ★ 攻击序列：有目标 + 技能可用且距离够 → ATTACK =====
         BTSequenceNode attackSequence = new BTSequenceNode();
 
-        // 条件1：在地面
         attackSequence.AddChild(new BTConditionNode(() => enemyFSM.IsGrounded));
 
-        // 条件2：有冷却好 + 距离够的技能
         attackSequence.AddChild(new BTConditionNode(() =>
         {
             return skillMgr != null
@@ -222,7 +219,6 @@ public class EnemyFSMBT
                 && skillMgr.HasAvailableSkill(enemyFSM.transform, enemyFSM.targetPlayer);
         }));
 
-        // ★ Action：选技能、记录施放、切换状态
         attackSequence.AddChild(new BTActionNode(() =>
         {
             EnemySkillData skill = skillMgr.GetAvailableSkill(
@@ -236,10 +232,19 @@ public class EnemyFSMBT
             return BTNodeState.Success;
         }));
 
-        // ===== 追击序列 =====
+        // ===== ★ 追击序列：有目标 + 有技能但距离不够 → MOVE 靠近 =====
         BTSequenceNode chaseSequence = new BTSequenceNode();
 
         chaseSequence.AddChild(new BTConditionNode(() => enemyFSM.IsGrounded));
+
+        chaseSequence.AddChild(new BTConditionNode(() =>
+        {
+            return skillMgr != null
+                && enemyFSM.hasTarget
+                && enemyFSM.targetPlayer != null
+                && skillMgr.HasAnySkillReadyIgnoreDistance(
+                    enemyFSM.transform, enemyFSM.targetPlayer);
+        }));
 
         chaseSequence.AddChild(new BTActionNode(() =>
         {
@@ -251,9 +256,24 @@ public class EnemyFSMBT
             return BTNodeState.Failure;
         }));
 
-        // ===== 根选择：攻击 > 追击 > 待机 =====
+        // ===== ★ 锁定移动序列：有目标 + 无任何可用技能 → LOCK_MOVE =====
+        BTSequenceNode lockMoveSequence = new BTSequenceNode();
+
+        lockMoveSequence.AddChild(new BTConditionNode(() => enemyFSM.IsGrounded));
+
+        lockMoveSequence.AddChild(new BTActionNode(() =>
+        {
+            if (enemyFSM.hasTarget)
+            {
+                enemyFSM.BT_SetDesiredState(EnemyStateType.LOCK_MOVE);
+                return BTNodeState.Success;
+            }
+            return BTNodeState.Failure;
+        }));
+
+        // ===== 根选择：攻击 > 追击 > 锁定移动 > 待机 =====
         BTSelectorNode root = new BTSelectorNode(
-            attackSequence, chaseSequence, actionIdle);
+            attackSequence, chaseSequence, lockMoveSequence, actionIdle);
 
         return new BehaviorTree(root);
     }

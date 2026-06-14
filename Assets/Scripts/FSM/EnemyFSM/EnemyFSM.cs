@@ -81,6 +81,7 @@ public class EnemyFSM : MonoBehaviour
         fsm.AddState(EnemyStateType.KNOCKDOWN, new EnemyKnockDownState(animator, fsm, this));
         fsm.AddState(EnemyStateType.FALLTOFLOOR, new EnemyFallToFloorState(animator, fsm, this, controller));
         fsm.AddState(EnemyStateType.GETUP, new EnemyGetUpState(animator, fsm, this));
+        fsm.AddState(EnemyStateType.LOCK_MOVE, new EnemyLockMoveState(animator, fsm, transform, controller, this));
 
         fsm.SetState(EnemyStateType.IDLE);
 
@@ -141,6 +142,10 @@ public class EnemyFSM : MonoBehaviour
                     case EnemyStateType.MOVE:
                         if (fsm.stateType != EnemyStateType.MOVE)
                             fsm.SetState(EnemyStateType.MOVE);
+                        break;
+                    case EnemyStateType.LOCK_MOVE:
+                        if (fsm.stateType != EnemyStateType.LOCK_MOVE)
+                            fsm.SetState(EnemyStateType.LOCK_MOVE);
                         break;
                     case EnemyStateType.IDLE:
                     default:

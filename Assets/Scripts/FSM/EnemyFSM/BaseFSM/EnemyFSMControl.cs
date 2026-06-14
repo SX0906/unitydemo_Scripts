@@ -13,7 +13,8 @@ public enum EnemyStateType
     GETUP,
     BLOCKBREAK,
     FALLTOFLOOR,
-    KNOCKDOWN
+    KNOCKDOWN,
+    LOCK_MOVE
 }
 
 public class EnemyFSMControl

@@ -235,7 +235,7 @@ public class TestFSM : MonoBehaviour
         }
         if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
             && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
-            && fsm.stateType != StateType.DODGE)
+            && fsm.stateType != StateType.DODGE && fsm.stateType != StateType.JUMP)
         {
             if (moveInput == Vector2.zero)
             {
