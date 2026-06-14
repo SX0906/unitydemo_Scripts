@@ -25,6 +25,7 @@ public class JumpState : StateBase
     {
         if (testfsm.JumpSoftEnter)
         {
+            testfsm.VerticalVelocity = 0f;
             testfsm.JumpSoftEnter = false;
             jumpHeld = false;          // 软进入不处理短跳逻辑
             isLanding = false;

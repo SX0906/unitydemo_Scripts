@@ -6,9 +6,13 @@ public class WeaponHitDetector : MonoBehaviour
     private string _currentHitDirTag;
     private HashSet<EnemyFSM> _hitTargets = new HashSet<EnemyFSM>();
     private Collider _weaponCollider;
+    private ActorVitals _playerVitals;
 
     [Header("伤害")]
     public float damage = 10f;
+
+    [Header("怒气获取")]
+    public float rageGainPerHit = 5f;
 
     private const float BackHitAngleThreshold = 100f;
 
@@ -20,6 +24,8 @@ public class WeaponHitDetector : MonoBehaviour
             _weaponCollider.isTrigger = true;
             _weaponCollider.enabled = false;
         }
+
+        _playerVitals = GetComponentInParent<ActorVitals>();
     }
 
     public void OnHitWindowOpen(string dirTag)
@@ -70,5 +76,11 @@ public class WeaponHitDetector : MonoBehaviour
         }
 
         enemy.TakeDamage(finalDirTag, dir, isLauncher, playerTransform, damage);
+
+        // 击中敌人 → 玩家获得怒气
+        if (_playerVitals != null)
+        {
+            _playerVitals.GainRage(rageGainPerHit);
+        }
     }
 }

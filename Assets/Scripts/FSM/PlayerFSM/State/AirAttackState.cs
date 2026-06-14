@@ -83,6 +83,7 @@ public class AirAttackState : StateBase
 
     public override void OnExit()
     {
+        testfsm.VerticalVelocity = 0f;
         animator.ResetTrigger(AirAttackTrigger);
         currentAnimStarted = false;
         snapTarget = null;

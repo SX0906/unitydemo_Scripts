@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 public enum StateType
 {
     IDlE,
@@ -10,7 +11,8 @@ public enum StateType
     JUMP,
     ATTACK_UP,
     AIR_ATTACK,
-    DODGE
+    DODGE,
+    HIT
 }
 
 public class FSMControl 
@@ -49,6 +51,8 @@ public class FSMControl
         this.stateType = stateType;//更新当前状态的标识符
         currentstate.OnEnter();
     }
+
     public StateBase GetCurrentState() => currentstate;//获取当前状态
 
+    public T GetState<T>(StateType type) where T : StateBase => allSaveState.TryGetValue(type, out var s) ? s as T : null;
 }

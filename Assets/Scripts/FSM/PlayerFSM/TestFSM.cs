@@ -8,6 +8,7 @@ public class TestFSM : MonoBehaviour
     private FSMControl fsm;
     private CharacterController controller;
     private WeaponHitDetector weaponHitDetector;
+    private PlayerVitals playerVitals;
     private bool _isRunning;
     private bool _isLockOn;
     public int currentComboSet { get; set; } = 1;
@@ -36,6 +37,11 @@ public class TestFSM : MonoBehaviour
     [Range(0f, 180f)] public float attackSnapAngle = 100f;
     public float attackSnapRotateSpeed = 720f;
 
+    [Header("体力消耗")]
+    public float dodgeStaminaCost = 20f;
+    public float attackUpStaminaCost = 30f;
+    public float jumpStaminaCost = 15f;
+
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
     [SerializeField] private float groundCheckDistance = 0.15f;
@@ -46,6 +52,7 @@ public class TestFSM : MonoBehaviour
         playerControl = new PlayerControl();
         controller = GetComponent<CharacterController>();
         weaponHitDetector = GetComponentInChildren<WeaponHitDetector>();
+        playerVitals = GetComponent<PlayerVitals>();
 
         fsm = new FSMControl();
         fsm.AddState(StateType.IDlE, new IdleState(animator, fsm));
@@ -62,6 +69,7 @@ public class TestFSM : MonoBehaviour
         fsm.AddState(StateType.AIR_ATTACK, new AirAttackState(animator, playerControl, fsm, this, controller, weaponCol,
             attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
         fsm.AddState(StateType.DODGE, new DodgeState(animator, playerControl, fsm, this));
+        fsm.AddState(StateType.HIT, new HitState(animator, fsm, this));
         fsm.SetState(StateType.IDlE);
     }
 
@@ -77,6 +85,13 @@ public class TestFSM : MonoBehaviour
 
     private void Update()
     {
+        // 受击状态下不处理其他输入
+        if (fsm.stateType == StateType.HIT)
+        {
+            fsm.OnTick();
+            return;
+        }
+
         Vector2 moveInput = playerControl.Player.Move.ReadValue<Vector2>();
 
         CheckLockOnRange();
@@ -117,18 +132,30 @@ public class TestFSM : MonoBehaviour
         {
             fsm.SetState(StateType.AIR_ATTACK);
         }
-        // 闪避（体力不足时无法使用）
+
+        // 闪避 —— 消耗体力 20
         if (playerControl.Player.Dodge.WasPressedThisFrame())
         {
             if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
                 && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK)
             {
-                fsm.SetState(StateType.DODGE);
+                if (playerVitals == null || playerVitals.UseStamina(dodgeStaminaCost))
+                {
+                    fsm.SetState(StateType.DODGE);
+                }
+                else
+                {
+                    Debug.Log("体力不足，无法闪避");
+                }
             }
         }
+
         if (playerControl.Player.Run.WasPressedThisFrame())
+        {
             _isRunning = !_isRunning;
+        }
         animator.SetFloat("Run", _isRunning ? 1f : 0f);
+
         if (playerControl.Player.LockOn.WasPressedThisFrame())
         {
             if (_isLockOn)
@@ -169,6 +196,8 @@ public class TestFSM : MonoBehaviour
                 }
             }
         }
+
+        // 跳跃 —— 消耗体力 15
         if (playerControl.Player.Jump.WasPressedThisFrame())
         {
             if (fsm.stateType == StateType.IDlE ||
@@ -176,15 +205,32 @@ public class TestFSM : MonoBehaviour
                 fsm.stateType == StateType.LockOn)
             {
                 if (IsGrounded)
-                    fsm.SetState(StateType.JUMP);
+                {
+                    if (playerVitals == null || playerVitals.UseStamina(jumpStaminaCost))
+                    {
+                        fsm.SetState(StateType.JUMP);
+                    }
+                    else
+                    {
+                        Debug.Log("体力不足，无法跳跃");
+                    }
+                }
             }
         }
-        // 升龙（体力不足时无法使用）
+
+        // 升龙 —— 消耗体力 30
         if (playerControl.Player.RAtk.WasPressedThisFrame())
         {
             if (fsm.stateType != StateType.ATTACK_UP)
             {
-                fsm.SetState(StateType.ATTACK_UP);
+                if (playerVitals == null || playerVitals.UseStamina(attackUpStaminaCost))
+                {
+                    fsm.SetState(StateType.ATTACK_UP);
+                }
+                else
+                {
+                    Debug.Log("体力不足，无法使用升龙");
+                }
             }
         }
         if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
@@ -259,6 +305,37 @@ public class TestFSM : MonoBehaviour
     public Vector2 GetMoveInput()
     {
         return playerControl.Player.Move.ReadValue<Vector2>();
+    }
+
+    // === 公开方法：受击 ===
+
+    /// <summary>
+    /// 玩家受到伤害。外部（敌人攻击检测等）调用此方法。
+    /// dirTag: 受击方向标签（F/B/L/R）
+    /// </summary>
+    public void TakeDamage(float damage, string dirTag, Transform attacker)
+    {
+        if (playerVitals == null || playerVitals.IsDead) return;
+
+        playerVitals.TakeDamage(damage);
+        playerVitals.OnHitReceived();   // 受击获取怒气
+
+        if (playerVitals.IsDead)
+            return;
+
+        var hitState = fsm.GetState<HitState>(StateType.HIT);
+        if (hitState != null)
+        {
+            if (fsm.stateType == StateType.HIT)
+            {
+                hitState.Rehit(dirTag, attacker);
+            }
+            else
+            {
+                hitState.SetHitInfo(dirTag, attacker);
+                fsm.SetState(StateType.HIT);
+            }
+        }
     }
 
     // === MoveState 使用的公开方法 ===

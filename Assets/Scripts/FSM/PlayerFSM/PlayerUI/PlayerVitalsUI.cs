@@ -17,10 +17,11 @@ public class PlayerVitalsUI : MonoBehaviour
 
         if (playerVitals != null)
         {
-            playerVitals.OnHealthChanged += UpdateBar;
-            playerVitals.OnStaminaChanged += (c, m) => { if (staminaFill) staminaFill.fillAmount = m > 0 ? c / m : 0; };
-            playerVitals.OnRageChanged += (c, m) => { if (rageFill) rageFill.fillAmount = m > 0 ? c / m : 0; };
-            UpdateBar(playerVitals.currentHealth, playerVitals.maxHealth);
+            playerVitals.OnHealthChanged += UpdateHealthBar;
+            playerVitals.OnStaminaChanged += UpdateStaminaBar;
+            playerVitals.OnRageChanged += UpdateRageBar;
+
+            UpdateHealthBar(playerVitals.currentHealth, playerVitals.maxHealth);
             if (staminaFill) staminaFill.fillAmount = playerVitals.StaminaPercent;
             if (rageFill) rageFill.fillAmount = playerVitals.RagePercent;
         }
@@ -30,14 +31,24 @@ public class PlayerVitalsUI : MonoBehaviour
     {
         if (playerVitals != null)
         {
-            playerVitals.OnHealthChanged -= UpdateBar;
-            playerVitals.OnStaminaChanged -= null;
-            playerVitals.OnRageChanged -= null;
+            playerVitals.OnHealthChanged -= UpdateHealthBar;
+            playerVitals.OnStaminaChanged -= UpdateStaminaBar;
+            playerVitals.OnRageChanged -= UpdateRageBar;
         }
     }
 
-    private void UpdateBar(float current, float max)
+    private void UpdateHealthBar(float current, float max)
     {
         if (healthFill) healthFill.fillAmount = max > 0 ? current / max : 0;
+    }
+
+    private void UpdateStaminaBar(float current, float max)
+    {
+        if (staminaFill) staminaFill.fillAmount = max > 0 ? current / max : 0;
+    }
+
+    private void UpdateRageBar(float current, float max)
+    {
+        if (rageFill) rageFill.fillAmount = max > 0 ? current / max : 0;
     }
 }
