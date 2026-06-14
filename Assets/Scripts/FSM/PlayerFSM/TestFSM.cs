@@ -69,7 +69,7 @@ public class TestFSM : MonoBehaviour
         fsm.AddState(StateType.AIR_ATTACK, new AirAttackState(animator, playerControl, fsm, this, controller, weaponCol,
             attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
         fsm.AddState(StateType.DODGE, new DodgeState(animator, playerControl, fsm, this));
-        fsm.AddState(StateType.HIT, new HitState(animator, fsm, this));
+        fsm.AddState(StateType.HIT, new HitState(fsm, this));
         fsm.SetState(StateType.IDlE);
     }
 
@@ -309,16 +309,15 @@ public class TestFSM : MonoBehaviour
 
     // === 公开方法：受击 ===
 
+
     /// <summary>
     /// 玩家受到伤害。外部（敌人攻击检测等）调用此方法。
-    /// dirTag: 受击方向标签（F/B/L/R）
     /// </summary>
-    public void TakeDamage(float damage, string dirTag, Transform attacker)
+    public void TakeDamage(float damage, Transform attacker)
     {
         if (playerVitals == null || playerVitals.IsDead) return;
 
         playerVitals.TakeDamage(damage);
-        playerVitals.OnHitReceived();   // 受击获取怒气
 
         if (playerVitals.IsDead)
             return;
@@ -328,11 +327,11 @@ public class TestFSM : MonoBehaviour
         {
             if (fsm.stateType == StateType.HIT)
             {
-                hitState.Rehit(dirTag, attacker);
+                hitState.Rehit(attacker);
             }
             else
             {
-                hitState.SetHitInfo(dirTag, attacker);
+                hitState.SetHitInfo(attacker);
                 fsm.SetState(StateType.HIT);
             }
         }

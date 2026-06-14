@@ -77,6 +77,13 @@ public class WeaponHitDetector : MonoBehaviour
 
         enemy.TakeDamage(finalDirTag, dir, isLauncher, playerTransform, damage);
 
+        // 击杀敌人 → 玩家获得击杀怒气
+        EnemyVitals enemyVitals = enemy.GetComponent<EnemyVitals>();
+        if (enemyVitals != null && enemyVitals.IsDead)
+        {
+            _playerVitals?.OnKill();
+        }
+
         // 击中敌人 → 玩家获得怒气
         if (_playerVitals != null)
         {

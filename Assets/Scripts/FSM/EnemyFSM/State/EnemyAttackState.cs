@@ -41,6 +41,7 @@ public class EnemyAttackState : EnemyStateBase
         comboIndex = 0;
         currentAnimStateName = currentSkill.FirstStateName;
         FaceAttacker();
+        enemyFSM.SetEnemyWeaponDamage(currentSkill.GetDamage(0));
         animator.CrossFadeInFixedTime(currentAnimStateName, 0.02f);
     }
 
@@ -79,6 +80,7 @@ public class EnemyAttackState : EnemyStateBase
 
     public override void OnExit()
     {
+        enemyFSM.OnEnemyHitWindowClose();
         // 异常中断（如受击）也确保冷却写入
         if (currentSkill != null)
         {
@@ -108,6 +110,7 @@ public class EnemyAttackState : EnemyStateBase
         {
             // 衔接下一段
             currentAnimStateName = currentSkill.GetStateName(comboIndex);
+            enemyFSM.SetEnemyWeaponDamage(currentSkill.GetDamage(comboIndex));
             animator.CrossFadeInFixedTime(currentAnimStateName, 0.02f);
         }
         else

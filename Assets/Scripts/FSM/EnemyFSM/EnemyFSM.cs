@@ -10,6 +10,7 @@ public class EnemyFSM : MonoBehaviour
     private EnemyFSMBT btBuilder;
 
     private EnemySkillManager skillManager;
+    private EnemyWeaponHitDetector enemyWeaponHitDetector;
 
     [Header("测试模式")]
     public bool testMode = false;
@@ -68,6 +69,7 @@ public class EnemyFSM : MonoBehaviour
         controller = GetComponent<CharacterController>();
         CombatAudioPlayer audioPlayer = GetComponent<CombatAudioPlayer>();
         skillManager = GetComponent<EnemySkillManager>();
+        enemyWeaponHitDetector = GetComponentInChildren<EnemyWeaponHitDetector>();
         fsm = new EnemyFSMControl();
 
         fsm.AddState(EnemyStateType.IDLE, new EnemyIdleState(animator, fsm, this, controller));
@@ -350,5 +352,21 @@ public class EnemyFSM : MonoBehaviour
         fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
         fsm.SetState(EnemyStateType.HIT);
         PlayHitStop();
+    }
+
+    public void SetEnemyWeaponDamage(float damage)
+    {
+        if (enemyWeaponHitDetector != null)
+            enemyWeaponHitDetector.SetCurrentDamage(damage);
+    }
+
+    public void OnEnemyHitWindowOpen()
+    {
+        enemyWeaponHitDetector?.OnEnemyHitWindowOpen();
+    }
+
+    public void OnEnemyHitWindowClose()
+    {
+        enemyWeaponHitDetector?.OnEnemyHitWindowClose();
     }
 }

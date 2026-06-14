@@ -1,47 +1,45 @@
 using UnityEngine;
 
+/// <summary>
+/// 玩家受击硬直状态 —— 无受击动画，仅硬直 + 面向攻击者 + 受击音效。
+/// </summary>
 public class HitState : StateBase
 {
-    private Animator animator;
     private FSMControl fsm;
     private TestFSM testfsm;
+    private CombatAudioPlayer audioPlayer;
 
-    private string hitDirTag = "F";
-    private float duration = 0.5f;
+    private float duration = 0.05f;
     private float timer;
     private Transform attacker;
 
-    public HitState(Animator animator, FSMControl fsm, TestFSM testfsm)
+    public HitState(FSMControl fsm, TestFSM testfsm)
     {
-        this.animator = animator;
         this.fsm = fsm;
         this.testfsm = testfsm;
+        this.audioPlayer = testfsm.GetComponent<CombatAudioPlayer>();
     }
 
-    public void SetHitInfo(string dirTag, Transform attackerTransform)
+    public void SetHitInfo(Transform attackerTransform)
     {
-        hitDirTag = dirTag;
         attacker = attackerTransform;
     }
 
-    public void Rehit(string dirTag, Transform attackerTransform)
+    public void Rehit(Transform attackerTransform)
     {
-        SetHitInfo(dirTag, attackerTransform);
-        string animName = "Hit_" + hitDirTag;
-        animator.CrossFadeInFixedTime(animName, 0f, 0);
+        attacker = attackerTransform;
         timer = duration;
+        audioPlayer?.PlayHitSound();
     }
 
     public override void OnEnter()
     {
-        string animName = "Hit_" + hitDirTag;
-        animator.CrossFadeInFixedTime(animName, 0f, 0);
         timer = duration;
+        audioPlayer?.PlayHitSound();
     }
 
     public override void OnUpdate()
     {
-        // 面向攻击者
         if (attacker != null)
         {
             Vector3 dirToAttacker = attacker.position - testfsm.transform.position;

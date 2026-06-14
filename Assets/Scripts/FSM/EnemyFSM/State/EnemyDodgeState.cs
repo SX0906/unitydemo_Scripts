@@ -75,7 +75,7 @@ public class EnemyDodgeState : EnemyStateBase
     {
         if (controller != null && controller.enabled)
         {
-            float dodgeSpeed = 1f;
+            float dodgeSpeed = 0.8f;
             controller.Move(dodgeDirection * dodgeSpeed * Time.deltaTime);
         }
 
