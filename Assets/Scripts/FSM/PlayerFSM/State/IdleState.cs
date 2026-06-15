@@ -14,6 +14,7 @@ public class IdleState : StateBase
 
     public override void OnEnter()
     {
+        animator.CrossFade("BaseMotion",0.02f);
         animator.SetFloat("speed", 0f);
         animator.SetFloat("MoveX", 0f);
         animator.SetFloat("MoveY", 0f);

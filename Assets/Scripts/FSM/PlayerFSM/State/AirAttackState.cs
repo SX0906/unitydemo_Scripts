@@ -19,6 +19,8 @@ public class AirAttackState : StateBase
     private float snapRotateSpeed;
     private LayerMask enemyLayers;
     private Transform snapTarget;
+    private PlayerVitals playerVitals;
+    private const float AirAttackStaminaCost = 5f;
 
     public AirAttackState(Animator animator, PlayerControl playerControl,
         FSMControl fsm, TestFSM testfsm, CharacterController controller, Collider weaponCollider,
@@ -38,6 +40,7 @@ public class AirAttackState : StateBase
 
     public override void OnEnter()
     {
+        playerVitals = testfsm.GetComponent<PlayerVitals>();
         testfsm.AirAttackEnterY = testfsm.transform.position.y;
         currentAnimStarted = false;
         animator.Play("Combo_Attack_Air_01", 0, 0f);
@@ -63,8 +66,17 @@ public class AirAttackState : StateBase
 
         if (playerControl.Player.Attack.WasPressedThisFrame())
         {
-            animator.SetTrigger(AirAttackTrigger);
-            currentAnimStarted = false;
+            if (playerVitals == null || playerVitals.UseStamina(AirAttackStaminaCost))
+            {
+                animator.SetTrigger(AirAttackTrigger);
+                currentAnimStarted = false;
+            }
+            else
+            {
+                // 体力不足 → 进入下落动画
+                testfsm.JumpSoftEnter = true;
+                fsm.SetState(StateType.JUMP);
+            }
             return;
         }
 

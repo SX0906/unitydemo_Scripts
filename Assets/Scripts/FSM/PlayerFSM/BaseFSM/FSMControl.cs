@@ -12,7 +12,8 @@ public enum StateType
     ATTACK_UP,
     AIR_ATTACK,
     DODGE,
-    HIT
+    HIT,
+    AIRTOFLOORATTACK
 }
 
 public class FSMControl 

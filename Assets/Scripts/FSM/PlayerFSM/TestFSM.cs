@@ -11,6 +11,9 @@ public class TestFSM : MonoBehaviour
     private PlayerVitals playerVitals;
     private bool _isRunning;
     private bool _isLockOn;
+    // 空中蓄力下砸
+    private bool isChargingAirToFloor;
+    private float airToFloorChargeTime;
     public int currentComboSet { get; set; } = 1;
     public bool JumpSoftEnter { get; set; }
     public float AirAttackEnterY { get; set; }
@@ -41,6 +44,11 @@ public class TestFSM : MonoBehaviour
     public float dodgeStaminaCost = 20f;
     public float attackUpStaminaCost = 30f;
     public float jumpStaminaCost = 15f;
+    public float airAttackStaminaCost = 5f;       // 空中攻击每次消耗体力
+
+    [Header("空中蓄力下砸")]
+    public float airToFloorChargeDuration = 1f;   // 长按多久触发
+    public float airToFloorStaminaCost = 30f;       // 体力消耗（可调）
 
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
@@ -70,6 +78,7 @@ public class TestFSM : MonoBehaviour
             attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
         fsm.AddState(StateType.DODGE, new DodgeState(animator, playerControl, fsm, this));
         fsm.AddState(StateType.HIT, new HitState(fsm, this));
+        fsm.AddState(StateType.AIRTOFLOORATTACK, new AirtoFloopAttackState(animator, playerControl, fsm, this, controller));
         fsm.SetState(StateType.IDlE);
     }
 
@@ -106,7 +115,8 @@ public class TestFSM : MonoBehaviour
             currentComboSet = 2;
             Debug.Log("切换到连招2");
         }
-        if (fsm.stateType != StateType.JUMP && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK)
+        if (fsm.stateType != StateType.JUMP && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
+            &&fsm.stateType!= StateType.AIRTOFLOORATTACK)
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
@@ -127,17 +137,65 @@ public class TestFSM : MonoBehaviour
                 }
             }
         }
-        if (playerControl.Player.Attack.WasPressedThisFrame()
-            && (fsm.stateType == StateType.JUMP || fsm.stateType == StateType.ATTACK_UP))
+
+        // 空中攻击蓄力检测 —— 长按1.5秒触发AirtoFloorAttack，松开则普通AirAttack
+        if (!IsGrounded || fsm.stateType == StateType.JUMP || fsm.stateType == StateType.ATTACK_UP || fsm.stateType == StateType.AIR_ATTACK)
         {
-            fsm.SetState(StateType.AIR_ATTACK);
+            if (playerControl.Player.Attack.WasPressedThisFrame())
+            {
+                isChargingAirToFloor = true;
+                airToFloorChargeTime = 0f;
+                Debug.Log("时间不足，无法释放下落攻击");
+            }
+
+            if (isChargingAirToFloor)
+            {
+                if (playerControl.Player.Attack.IsPressed())
+                {
+                    airToFloorChargeTime += Time.deltaTime;
+                    if (airToFloorChargeTime >= airToFloorChargeDuration)
+                    {
+                        Debug.Log("时间满足，是否下落攻击");
+                        isChargingAirToFloor = false;
+                        if (playerVitals == null || playerVitals.UseStamina(airToFloorStaminaCost))
+                        {
+                            fsm.SetState(StateType.AIRTOFLOORATTACK);
+                        }
+                        else
+                        {
+                            Debug.Log("体力不足，无法使用空中下砸");
+                        }
+                    }
+                }
+                else
+                {
+                    // 提前松开 → 普通空中攻击（消耗体力）
+                    isChargingAirToFloor = false;
+                    if (playerVitals == null || playerVitals.UseStamina(airAttackStaminaCost))
+                    {
+                        fsm.SetState(StateType.AIR_ATTACK);
+                    }
+                    else
+                    {
+                        // 体力不足 → 进入下落动画
+                        JumpSoftEnter = true;
+                        fsm.SetState(StateType.JUMP);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // 离开跳跃/升龙状态时重置蓄力
+            isChargingAirToFloor = false;
         }
 
         // 闪避 —— 消耗体力 20
         if (playerControl.Player.Dodge.WasPressedThisFrame())
         {
             if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
-                && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK)
+                && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
+                && fsm.stateType != StateType.AIRTOFLOORATTACK)
             {
                 if (playerVitals == null || playerVitals.UseStamina(dodgeStaminaCost))
                 {
@@ -221,7 +279,7 @@ public class TestFSM : MonoBehaviour
         // 升龙 —— 消耗体力 30
         if (playerControl.Player.RAtk.WasPressedThisFrame())
         {
-            if (fsm.stateType != StateType.ATTACK_UP)
+            if (fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIRTOFLOORATTACK)
             {
                 if (playerVitals == null || playerVitals.UseStamina(attackUpStaminaCost))
                 {
@@ -235,7 +293,8 @@ public class TestFSM : MonoBehaviour
         }
         if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
             && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
-            && fsm.stateType != StateType.DODGE && fsm.stateType != StateType.JUMP)
+            && fsm.stateType != StateType.DODGE && fsm.stateType != StateType.JUMP
+            && fsm.stateType != StateType.AIRTOFLOORATTACK)
         {
             if (moveInput == Vector2.zero)
             {
