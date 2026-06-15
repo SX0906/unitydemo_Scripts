@@ -14,7 +14,8 @@ public enum EnemyStateType
     BLOCKBREAK,
     FALLTOFLOOR,
     KNOCKDOWN,
-    LOCK_MOVE
+    LOCK_MOVE,
+    DEATH
 }
 
 public class EnemyFSMControl

@@ -1,24 +1,30 @@
 using UnityEngine;
 using GameInput;
+using Unity.Entities.UniversalDelegates;
 public class DodgeState : StateBase
 {
     private Animator animator;
     private PlayerControl playerControl;
     private FSMControl fsm;
     private TestFSM testfsm;
+    private PlayerVitals playerVitals;
     private bool currentAnimStarted;
 
     private const string DodgeAnimName = "Dodge";
 
-    public DodgeState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM testfsm)
+    public DodgeState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM testfsm,PlayerVitals playerVitals)
     {
         this.animator = animator;
         this.playerControl = playerControl;
         this.fsm = fsm;
         this.testfsm = testfsm;
+        this.playerVitals = playerVitals;
     }
     public override void OnEnter()
     {
+        if (playerVitals != null)                    
+            playerVitals.isInvincible = true;
+
         Vector2 input = playerControl.Player.Move.ReadValue<Vector2>();
 
         // 将原始输入转为镜头相对的世界方向
@@ -77,6 +83,8 @@ public class DodgeState : StateBase
     }
     public override void OnExit()
     {
+        if (playerVitals != null)                     
+            playerVitals.isInvincible = false;
         currentAnimStarted = false;
     }
 

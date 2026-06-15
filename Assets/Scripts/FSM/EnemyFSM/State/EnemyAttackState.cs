@@ -11,6 +11,7 @@ public class EnemyAttackState : EnemyStateBase
     // === 技能驱动 ===
     private EnemySkillData currentSkill;
     private int comboIndex;
+    private int currentStepIndex;
     private string currentAnimStateName;
 
     public EnemyAttackState(Animator animator, EnemyFSMControl fsm,
@@ -39,6 +40,7 @@ public class EnemyAttackState : EnemyStateBase
         }
 
         comboIndex = 0;
+        currentStepIndex = 0;
         currentAnimStateName = currentSkill.FirstStateName;
         FaceAttacker();
         enemyFSM.SetEnemyWeaponDamage(currentSkill.GetDamage(0));
@@ -90,6 +92,7 @@ public class EnemyAttackState : EnemyStateBase
         attacker = null;
         currentSkill = null;
         comboIndex = 0;
+        currentStepIndex = 0;
         currentAnimStateName = null;
     }
 
@@ -110,6 +113,7 @@ public class EnemyAttackState : EnemyStateBase
         {
             // 衔接下一段
             currentAnimStateName = currentSkill.GetStateName(comboIndex);
+            currentStepIndex = comboIndex;
             enemyFSM.SetEnemyWeaponDamage(currentSkill.GetDamage(comboIndex));
             animator.CrossFadeInFixedTime(currentAnimStateName, 0.02f);
         }
@@ -142,6 +146,35 @@ public class EnemyAttackState : EnemyStateBase
         {
             Quaternion targetRot = Quaternion.LookRotation(dir);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Time.deltaTime);
+        }
+    }
+
+    /// <summary>
+    /// 动画事件：触发范围攻击。
+    /// 在 Animator 对应动画帧挂 AnimationEvent 调此方法（无参）。
+    /// </summary>
+    public void OnAreaAttack()
+    {
+        if (currentSkill == null || currentStepIndex < 0 || currentStepIndex >= currentSkill.ComboCount)
+            return;
+
+        SkillComboStep step = currentSkill.comboSteps[currentStepIndex];
+        if (!step.isAreaAttack) return;
+
+        float damage = step.areaDamage > 0f ? step.areaDamage : currentSkill.GetDamage(currentStepIndex);
+        
+        // 愤怒状态下伤害 +5%
+        var vitals = enemyFSM.GetComponent<EnemyVitals>();
+        if (vitals != null && vitals.RagePercent >= 1f)
+            damage *= 1.05f;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, step.areaRadius, enemyFSM.PlayerLayer);
+        foreach (Collider hit in hits)
+        {
+            TestFSM player = hit.GetComponent<TestFSM>();
+            if (player == null) player = hit.GetComponentInParent<TestFSM>();
+            if (player != null)
+                player.TakeDamage(damage, transform);
         }
     }
 }

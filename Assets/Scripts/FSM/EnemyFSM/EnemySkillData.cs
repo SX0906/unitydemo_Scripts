@@ -17,6 +17,11 @@ public class SkillComboStep
 
     [Header("多段伤害时的间隔")]
     public float hitInterval = 0.2f;
+    
+    [Header("范围攻击")]
+    public bool isAreaAttack = false;
+    public float areaRadius = 3f;
+    public float areaDamage = 20f;
 }
 
 /// <summary>

@@ -47,6 +47,10 @@ public class EnemySkillManager : MonoBehaviour
     public bool IsSkillReady(EnemySkillData skill, Transform self, Transform target)
     {
         if (skill == null || !skill.isAvailable || target == null) return false;
+        
+        PlayerVitals pv = target.GetComponent<PlayerVitals>();
+        if (pv == null) pv = target.GetComponentInParent<PlayerVitals>();
+        if (pv != null && pv.IsDead) return false;
 
         if (cooldownEndTimes.TryGetValue(skill.skillID, out float end) && Time.time < end)
             return false;
@@ -76,7 +80,13 @@ public class EnemySkillManager : MonoBehaviour
     public void FinishCast()
     {
         if (CurrentSkill != null)
-            cooldownEndTimes[CurrentSkill.skillID] = Time.time + CurrentSkill.coolDown;
+        {
+            float cd = CurrentSkill.coolDown;
+            var vitals = GetComponent<EnemyVitals>();
+            if (vitals != null && vitals.RagePercent >= 1f)
+                cd *= 0.9f;
+            cooldownEndTimes[CurrentSkill.skillID] = Time.time + cd;
+        }
 
         CurrentSkill = null;
         CurrentTarget = null;
@@ -95,6 +105,11 @@ public class EnemySkillManager : MonoBehaviour
     public bool HasAnySkillReadyIgnoreDistance(Transform self, Transform target)
     {
         if (target == null || skillPool == null) return false;
+        
+        PlayerVitals pv = target.GetComponent<PlayerVitals>();
+        if (pv == null) pv = target.GetComponentInParent<PlayerVitals>();
+        if (pv != null && pv.IsDead) return false;
+               
         foreach (var s in skillPool)
         {
             if (s == null || !s.isAvailable) continue;

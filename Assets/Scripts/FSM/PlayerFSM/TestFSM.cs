@@ -18,6 +18,11 @@ public class TestFSM : MonoBehaviour
     public bool JumpSoftEnter { get; set; }
     public float AirAttackEnterY { get; set; }
 
+    // === 反击（BackAttack） ===
+    public bool backAttackAvailable;
+    public float backAttackTimer;
+    public float backAttackDuration = 5f;
+
     // === 公开属性（供 State 类访问） ===
     public bool IsLockOn => _isLockOn;
     public bool IsRunning => _isRunning;
@@ -53,6 +58,15 @@ public class TestFSM : MonoBehaviour
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
     [SerializeField] private float groundCheckDistance = 0.15f;
+    
+    [Header("顿帧效果")]
+    public float hitStopTimeScale = 0.1f;       // 命中时时间缩放
+    public float hitStopDuration = 0.2f;        // 命中顿帧持续秒数
+    public float dodgeSlowTimeScale = 0.5f;     // 闪避攻击时慢动作缩放
+    public float dodgeSlowDuration = 0.3f;      // 闪避慢动作持续秒数
+
+    [Header("Power防御")]
+    [Range(0f, 360f)] public float powerBlockAngle = 160f;  // Power状态下正面格挡角度
 
     private void Awake()
     {
@@ -76,9 +90,14 @@ public class TestFSM : MonoBehaviour
             attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
         fsm.AddState(StateType.AIR_ATTACK, new AirAttackState(animator, playerControl, fsm, this, controller, weaponCol,
             attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
-        fsm.AddState(StateType.DODGE, new DodgeState(animator, playerControl, fsm, this));
+        fsm.AddState(StateType.DODGE, new DodgeState(animator, playerControl, fsm, this,playerVitals));
         fsm.AddState(StateType.HIT, new HitState(fsm, this));
         fsm.AddState(StateType.AIRTOFLOORATTACK, new AirtoFloopAttackState(animator, playerControl, fsm, this, controller));
+        fsm.AddState(StateType.POWER, new PowerState(animator, playerControl, fsm, this, playerVitals));
+        fsm.AddState(StateType.BACKATTACK, new BackAttackState(animator, playerControl, fsm, this, weaponCol,
+            attackSnapDistance, attackSnapAngle, attackSnapRotateSpeed));
+        fsm.AddState(StateType.DEATH,new DeathState(animator,fsm,this));
+        
         fsm.SetState(StateType.IDlE);
     }
 
@@ -94,14 +113,32 @@ public class TestFSM : MonoBehaviour
 
     private void Update()
     {
-        // 受击状态下不处理其他输入
-        if (fsm.stateType == StateType.HIT)
+        // 受击状态、死亡、Power下不处理其他输入
+        if (fsm.stateType == StateType.HIT || fsm.stateType == StateType.DEATH)
+        {
+            fsm.OnTick();
+            return;
+        }
+
+        // Power状态下只跑Tick，不处理任何其他输入
+        if (fsm.stateType == StateType.POWER)
         {
             fsm.OnTick();
             return;
         }
 
         Vector2 moveInput = playerControl.Player.Move.ReadValue<Vector2>();
+
+        // 反击计时器倒计时
+        if (backAttackAvailable)
+        {
+            backAttackTimer -= Time.deltaTime;
+            if (backAttackTimer <= 0f)
+            {
+                backAttackAvailable = false;
+                backAttackTimer = 0f;
+            }
+        }
 
         CheckLockOnRange();
 
@@ -115,11 +152,40 @@ public class TestFSM : MonoBehaviour
             currentComboSet = 2;
             Debug.Log("切换到连招2");
         }
+
+        // === Power技能：R键，怒气满时释放 ===
+        if (playerControl.Player.Power.WasPressedThisFrame())
+        {
+            if (playerVitals != null && playerVitals.currentRage >= playerVitals.maxRage)
+            {
+                if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
+                    && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
+                    && fsm.stateType != StateType.AIRTOFLOORATTACK
+                    && fsm.stateType != StateType.JUMP)
+                {
+                    fsm.SetState(StateType.POWER);
+                    return;
+                }
+            }
+            else
+            {
+                Debug.Log("怒气不足，无法释放Power技能");
+            }
+        }
+
+        // === Attack输入处理 ===
         if (fsm.stateType != StateType.JUMP && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
             &&fsm.stateType!= StateType.AIRTOFLOORATTACK)
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
+                // 反击可用时优先触发反击
+                if (backAttackAvailable && backAttackTimer > 0f)
+                {
+                    fsm.SetState(StateType.BACKATTACK);
+                    return;
+                }
+
                 if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02)
                 {
                     switch (currentComboSet)
@@ -143,6 +209,13 @@ public class TestFSM : MonoBehaviour
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
+                // 反击可用时优先触发反击
+                if (backAttackAvailable && backAttackTimer > 0f)
+                {
+                    fsm.SetState(StateType.BACKATTACK);
+                    return;
+                }
+
                 isChargingAirToFloor = true;
                 airToFloorChargeTime = 0f;
                 Debug.Log("时间不足，无法释放下落攻击");
@@ -291,6 +364,7 @@ public class TestFSM : MonoBehaviour
                 }
             }
         }
+
         if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
             && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
             && fsm.stateType != StateType.DODGE && fsm.stateType != StateType.JUMP
@@ -368,7 +442,6 @@ public class TestFSM : MonoBehaviour
 
     // === 公开方法：受击 ===
 
-
     /// <summary>
     /// 玩家受到伤害。外部（敌人攻击检测等）调用此方法。
     /// </summary>
@@ -376,10 +449,65 @@ public class TestFSM : MonoBehaviour
     {
         if (playerVitals == null || playerVitals.IsDead) return;
 
+        // 闪避无敌时 → 触发慢动作 + 不吃伤害 + 获得反击机会
+        if (playerVitals.isInvincible && fsm.stateType == StateType.DODGE)
+        {
+            StartCoroutine(HitStopCoroutine(dodgeSlowTimeScale, dodgeSlowDuration));
+            // 闪避成功 → 获得反击机会
+            backAttackAvailable = true;
+            backAttackTimer = backAttackDuration;
+            return;
+        }
+
+        // === Power状态下防御处理 ===
+        if (fsm.stateType == StateType.POWER)
+        {
+            if (attacker != null)
+            {
+                Vector3 toAttacker = attacker.position - transform.position;
+                toAttacker.y = 0;
+                float attackAngle = toAttacker.magnitude > 0.01f
+                    ? Vector3.Angle(transform.forward, toAttacker)
+                    : 0f;
+
+                // 正面 powerBlockAngle 度内 → 自动格挡（播放格挡音效，不受伤）
+                if (attackAngle <= powerBlockAngle * 0.5f)
+                {
+                    CombatAudioPlayer audio = GetComponent<CombatAudioPlayer>();
+                    audio?.PlayParrySound();
+                    return;
+                }
+                else
+                {
+                    // 其他方向 → 受到50%伤害，但霸体不打断
+                    damage *= 0.5f;
+                }
+            }
+
+            // 造成伤害但不切换状态（霸体）
+            playerVitals.TakeDamage(damage);
+
+            if (playerVitals.IsDead)
+            {
+                fsm.SetState(StateType.DEATH);
+                return;
+            }
+
+            // 命中顿帧（可选，保留手感）
+            StartCoroutine(HitStopCoroutine(hitStopTimeScale, hitStopDuration));
+            return;
+        }
+
         playerVitals.TakeDamage(damage);
 
         if (playerVitals.IsDead)
+        {
+            fsm.SetState(StateType.DEATH);
             return;
+        }
+
+        // 命中顿帧
+        StartCoroutine(HitStopCoroutine(hitStopTimeScale, hitStopDuration));
 
         var hitState = fsm.GetState<HitState>(StateType.HIT);
         if (hitState != null)
@@ -428,6 +556,14 @@ public class TestFSM : MonoBehaviour
             float speed = _isRunning ? 2f : 1f;
             animator.SetFloat("speed", speed);
         }
+    }
+
+    private System.Collections.IEnumerator HitStopCoroutine(float timeScale, float duration)
+    {
+        float original = Time.timeScale;
+        Time.timeScale = timeScale;
+        yield return new WaitForSecondsRealtime(duration);
+        Time.timeScale = original;
     }
 
     // === JumpEndBehaviour 使用的公开方法 ===

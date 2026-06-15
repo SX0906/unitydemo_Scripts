@@ -8,6 +8,7 @@ public class EnemyWeaponHitDetector : MonoBehaviour
 {
     private float _currentDamage;
     private bool _hitWindowOpen;
+    private EnemyVitals _enemyVitals;
     private HashSet<TestFSM> _hitTargets = new HashSet<TestFSM>();
     private Collider _weaponCollider;
 
@@ -22,6 +23,8 @@ public class EnemyWeaponHitDetector : MonoBehaviour
             _weaponCollider.isTrigger = true;
             _weaponCollider.enabled = false;
         }
+
+        _enemyVitals = GetComponentInParent<EnemyVitals>();
     }
 
     /// <summary>由 EnemyFSM.SetEnemyWeaponDamage 调用，设置当前连击段伤害</summary>
@@ -58,6 +61,9 @@ public class EnemyWeaponHitDetector : MonoBehaviour
         if (_hitTargets.Contains(player)) return;
         _hitTargets.Add(player);
 
-        player.TakeDamage(_currentDamage * damageMultiplier, transform.root);
+        float finalDamage = _currentDamage * damageMultiplier;
+        if (_enemyVitals != null && _enemyVitals.RagePercent >= 1f)
+            finalDamage *= 1.05f;
+        player.TakeDamage(finalDamage, transform.root);
     }
 }

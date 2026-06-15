@@ -255,6 +255,15 @@ namespace GameInput
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Power"",
+                    ""type"": ""Button"",
+                    ""id"": ""b4c754a1-ac66-47d5-adb2-de0cd14a7e2b"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -739,6 +748,17 @@ namespace GameInput
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
                     ""action"": ""Dodge"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""61b4b5e4-4f76-4995-84bd-3a28af6e1304"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Power"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1344,6 +1364,7 @@ namespace GameInput
             m_Player_ComboSet2 = m_Player.FindAction("ComboSet2", throwIfNotFound: true);
             m_Player_RAtk = m_Player.FindAction("RAtk", throwIfNotFound: true);
             m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
+            m_Player_Power = m_Player.FindAction("Power", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1455,6 +1476,7 @@ namespace GameInput
         private readonly InputAction m_Player_ComboSet2;
         private readonly InputAction m_Player_RAtk;
         private readonly InputAction m_Player_Dodge;
+        private readonly InputAction m_Player_Power;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1539,6 +1561,10 @@ namespace GameInput
             /// </summary>
             public InputAction @Dodge => m_Wrapper.m_Player_Dodge;
             /// <summary>
+            /// Provides access to the underlying input action "Player/Power".
+            /// </summary>
+            public InputAction @Power => m_Wrapper.m_Player_Power;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -1618,6 +1644,9 @@ namespace GameInput
                 @Dodge.started += instance.OnDodge;
                 @Dodge.performed += instance.OnDodge;
                 @Dodge.canceled += instance.OnDodge;
+                @Power.started += instance.OnPower;
+                @Power.performed += instance.OnPower;
+                @Power.canceled += instance.OnPower;
             }
 
             /// <summary>
@@ -1683,6 +1712,9 @@ namespace GameInput
                 @Dodge.started -= instance.OnDodge;
                 @Dodge.performed -= instance.OnDodge;
                 @Dodge.canceled -= instance.OnDodge;
+                @Power.started -= instance.OnPower;
+                @Power.performed -= instance.OnPower;
+                @Power.canceled -= instance.OnPower;
             }
 
             /// <summary>
@@ -2109,6 +2141,13 @@ namespace GameInput
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnDodge(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Power" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPower(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.
