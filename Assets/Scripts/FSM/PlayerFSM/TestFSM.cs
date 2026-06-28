@@ -1,5 +1,6 @@
 using UnityEngine;
 using GameInput;
+using UnityEngine.Playables;
 
 public class TestFSM : MonoBehaviour
 {
@@ -35,6 +36,9 @@ public class TestFSM : MonoBehaviour
     public PlayerCameraController cameraController;
     public Transform lookRoot;
     public Transform _lockOnTarget;
+
+    [Header("Timeline")]
+    public PlayableDirector powerDirector;
     public LayerMask targetLayers;
     public float lockOnSearchRadius = 10f;
     public float lockOnActivationRange = 6f;
@@ -46,24 +50,25 @@ public class TestFSM : MonoBehaviour
     public float attackSnapRotateSpeed = 720f;
 
     [Header("体力消耗")]
-    public float dodgeStaminaCost = 20f;
-    public float attackUpStaminaCost = 30f;
-    public float jumpStaminaCost = 15f;
-    public float airAttackStaminaCost = 5f;       // 空中攻击每次消耗体力
+    public float dodgeStaminaCost = 15f;
+    public float attackUpStaminaCost = 20f;
+    public float jumpStaminaCost = 10f;
+    public float airAttackStaminaCost = 3f;       // 空中攻击每次消耗体力
 
     [Header("空中蓄力下砸")]
     public float airToFloorChargeDuration = 1f;   // 长按多久触发
-    public float airToFloorStaminaCost = 30f;       // 体力消耗（可调）
+    public float airToFloorStaminaCost = 18f;       // 体力消耗（可调）
 
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
     [SerializeField] private float groundCheckDistance = 0.15f;
     
     [Header("顿帧效果")]
-    public float hitStopTimeScale = 0.1f;       // 命中时时间缩放
-    public float hitStopDuration = 0.2f;        // 命中顿帧持续秒数
+    //public float hitStopTimeScale = 0.1f;       // 命中时时间缩放
+    //public float hitStopDuration = 0.2f;        // 命中顿帧持续秒数
+    public int hitStopFrameCount = 8;           //命中顿帧停止帧数
     public float dodgeSlowTimeScale = 0.5f;     // 闪避攻击时慢动作缩放
-    public float dodgeSlowDuration = 0.3f;      // 闪避慢动作持续秒数
+    public float dodgeSlowDuration = 0.2f;      // 闪避慢动作持续秒数
 
     [Header("Power防御")]
     [Range(0f, 360f)] public float powerBlockAngle = 160f;  // Power状态下正面格挡角度
@@ -77,6 +82,9 @@ public class TestFSM : MonoBehaviour
         playerVitals = GetComponent<PlayerVitals>();
 
         fsm = new FSMControl();
+
+        // 顿帧管理器宿主注册
+        HitStopManager.EnsureHost(this);
         fsm.AddState(StateType.IDlE, new IdleState(animator, fsm));
         fsm.AddState(StateType.MOVE, new MoveState(animator, playerControl, fsm, this));
         Collider weaponCol = GetComponentInChildren<WeaponHitDetector>()?.GetComponent<Collider>();
@@ -266,8 +274,7 @@ public class TestFSM : MonoBehaviour
         // 闪避 —— 消耗体力 20
         if (playerControl.Player.Dodge.WasPressedThisFrame())
         {
-            if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
-                && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
+            if (fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
                 && fsm.stateType != StateType.AIRTOFLOORATTACK)
             {
                 if (playerVitals == null || playerVitals.UseStamina(dodgeStaminaCost))
@@ -452,7 +459,7 @@ public class TestFSM : MonoBehaviour
         // 闪避无敌时 → 触发慢动作 + 不吃伤害 + 获得反击机会
         if (playerVitals.isInvincible && fsm.stateType == StateType.DODGE)
         {
-            StartCoroutine(HitStopCoroutine(dodgeSlowTimeScale, dodgeSlowDuration));
+            HitStopManager.Request(dodgeSlowTimeScale, dodgeSlowDuration);
             // 闪避成功 → 获得反击机会
             backAttackAvailable = true;
             backAttackTimer = backAttackDuration;
@@ -462,39 +469,7 @@ public class TestFSM : MonoBehaviour
         // === Power状态下防御处理 ===
         if (fsm.stateType == StateType.POWER)
         {
-            if (attacker != null)
-            {
-                Vector3 toAttacker = attacker.position - transform.position;
-                toAttacker.y = 0;
-                float attackAngle = toAttacker.magnitude > 0.01f
-                    ? Vector3.Angle(transform.forward, toAttacker)
-                    : 0f;
-
-                // 正面 powerBlockAngle 度内 → 自动格挡（播放格挡音效，不受伤）
-                if (attackAngle <= powerBlockAngle * 0.5f)
-                {
-                    CombatAudioPlayer audio = GetComponent<CombatAudioPlayer>();
-                    audio?.PlayParrySound();
-                    return;
-                }
-                else
-                {
-                    // 其他方向 → 受到50%伤害，但霸体不打断
-                    damage *= 0.5f;
-                }
-            }
-
-            // 造成伤害但不切换状态（霸体）
-            playerVitals.TakeDamage(damage);
-
-            if (playerVitals.IsDead)
-            {
-                fsm.SetState(StateType.DEATH);
-                return;
-            }
-
-            // 命中顿帧（可选，保留手感）
-            StartCoroutine(HitStopCoroutine(hitStopTimeScale, hitStopDuration));
+            // Power 状态下玩家无敌，直接忽略伤害
             return;
         }
 
@@ -506,8 +481,14 @@ public class TestFSM : MonoBehaviour
             return;
         }
 
-        // 命中顿帧
-        StartCoroutine(HitStopCoroutine(hitStopTimeScale, hitStopDuration));
+        // 命中顿帧——双方停止
+        HitStopManager.FreezeAnimator(animator, hitStopFrameCount);
+        if (attacker != null)
+        {
+            Animator attackerAnim = attacker.GetComponentInChildren<Animator>();
+            if (attackerAnim != null)
+                HitStopManager.FreezeAnimator(attackerAnim, hitStopFrameCount);
+        }
 
         var hitState = fsm.GetState<HitState>(StateType.HIT);
         if (hitState != null)
@@ -560,10 +541,7 @@ public class TestFSM : MonoBehaviour
 
     private System.Collections.IEnumerator HitStopCoroutine(float timeScale, float duration)
     {
-        float original = Time.timeScale;
-        Time.timeScale = timeScale;
-        yield return new WaitForSecondsRealtime(duration);
-        Time.timeScale = original;
+        yield break;
     }
 
     // === JumpEndBehaviour 使用的公开方法 ===
@@ -583,5 +561,50 @@ public class TestFSM : MonoBehaviour
     public void OnHitWindowClose()
     {
         weaponHitDetector?.OnHitWindowClose();
+    }
+
+    // === Timeline Signal 调用：Power 技能的每次范围伤害 ===
+    public void DealPowerDamage()
+    {
+        Transform t = transform;
+        // 伤害球：前方1.8米，半径1.8米
+        Vector3 center = t.position + t.forward * 1.8f + Vector3.up * 0.5f;
+
+        Collider[] hits = Physics.OverlapSphere(center, 1.8f, targetLayers);
+
+        foreach (Collider col in hits)
+        {
+            EnemyFSM enemy = col.GetComponentInParent<EnemyFSM>();
+            if (enemy == null) continue;
+
+            Vector3 dir = enemy.transform.position - t.position;
+            dir.y = 0;
+            if (dir.magnitude < 0.01f) dir = t.forward;
+            dir.Normalize();
+
+            enemy.TakeDamage("F", dir, false, t, 25f, true);
+        }
+    }
+
+    // === Timeline Signal 调用：Power 技能终结伤害（2倍） ===
+    public void DealPowerDamageFinal()
+    {
+        Transform t = transform;
+        Vector3 center = t.position + t.forward * 1.8f + Vector3.up * 0.5f;
+
+        Collider[] hits = Physics.OverlapSphere(center, 1.8f, targetLayers);
+
+        foreach (Collider col in hits)
+        {
+            EnemyFSM enemy = col.GetComponentInParent<EnemyFSM>();
+            if (enemy == null) continue;
+
+            Vector3 dir = enemy.transform.position - t.position;
+            dir.y = 0;
+            if (dir.magnitude < 0.01f) dir = t.forward;
+            dir.Normalize();
+
+            enemy.TakeDamage("F", dir, false, t, 50f, true);
+        }
     }
 }

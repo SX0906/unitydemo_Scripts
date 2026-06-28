@@ -20,7 +20,7 @@ public class AirAttackState : StateBase
     private LayerMask enemyLayers;
     private Transform snapTarget;
     private PlayerVitals playerVitals;
-    private const float AirAttackStaminaCost = 5f;
+    private const float AirAttackStaminaCost = 3f;
 
     public AirAttackState(Animator animator, PlayerControl playerControl,
         FSMControl fsm, TestFSM testfsm, CharacterController controller, Collider weaponCollider,

@@ -3,6 +3,7 @@ using System.Collections;
 
 public class EnemyFSM : MonoBehaviour
 {
+    private Animator animator;
     private EnemyFSMControl fsm;
     private CharacterController controller;
 
@@ -11,6 +12,8 @@ public class EnemyFSM : MonoBehaviour
 
     private EnemySkillManager skillManager;
     private EnemyWeaponHitDetector enemyWeaponHitDetector;
+
+    private int _blockCount = 0; // 格挡计数，每第3次触发弹刀攻击
 
     [Header("测试模式")]
     public bool testMode = false;
@@ -34,9 +37,9 @@ public class EnemyFSM : MonoBehaviour
     [HideInInspector] public Vector3 lastKnownPlayerPos;
 
     [Header("顿帧设置")]
-    public float hitStopTimeScale = 0.1f;
-    public float hitStopDuration = 0.2f;
-    public Coroutine hitStopCoroutine;
+    //public float hitStopTimeScale = 0.1f;
+    //public float hitStopDuration = 0.2f;
+    public int hitStopFrameCount = 8;
     private float memoryDuration = 2f;
     private float memoryTimer;
 
@@ -61,17 +64,21 @@ public class EnemyFSM : MonoBehaviour
             fsm.stateType == EnemyStateType.BLOCKBREAK ||
             fsm.stateType == EnemyStateType.KNOCKDOWN ||
             fsm.stateType == EnemyStateType.FALLTOFLOOR ||
+            fsm.stateType == EnemyStateType.PARRYATTACK ||
             fsm.stateType == EnemyStateType.GETUP
         );
 
     private void Awake()
     {
-        Animator animator = GetComponent<Animator>();
+        animator = GetComponent<Animator>();
         controller = GetComponent<CharacterController>();
         CombatAudioPlayer audioPlayer = GetComponent<CombatAudioPlayer>();
         skillManager = GetComponent<EnemySkillManager>();
         enemyWeaponHitDetector = GetComponentInChildren<EnemyWeaponHitDetector>();
         fsm = new EnemyFSMControl();
+
+        // 顿帧管理器宿主注册
+        HitStopManager.EnsureHost(this);
 
         fsm.AddState(EnemyStateType.IDLE, new EnemyIdleState(animator, fsm, this, controller));
         fsm.AddState(EnemyStateType.MOVE, new EnemyMoveState(animator, fsm, transform, controller, this));
@@ -86,6 +93,7 @@ public class EnemyFSM : MonoBehaviour
         fsm.AddState(EnemyStateType.GETUP, new EnemyGetUpState(animator, fsm, this));
         fsm.AddState(EnemyStateType.LOCK_MOVE, new EnemyLockMoveState(animator, fsm, transform, controller, this));
         fsm.AddState(EnemyStateType.DEATH, new EnemyDeathState(animator,fsm,this,controller));
+        fsm.AddState(EnemyStateType.PARRYATTACK, new EnemyParryAttackState(animator, fsm, this, transform, audioPlayer));
         fsm.SetState(EnemyStateType.IDLE);
 
         btBuilder = new EnemyFSMBT();
@@ -232,25 +240,30 @@ public class EnemyFSM : MonoBehaviour
 
     private IEnumerator HitStopCoroutine()
     {
-        Time.timeScale = hitStopTimeScale;
-        yield return new WaitForSecondsRealtime(hitStopDuration);
-        Time.timeScale = 1f;
-        hitStopCoroutine = null;
+        // 已交由 HitStopManager 统一管理，此协程不再直接使用
+        yield break;
     }
 
-    private void PlayHitStop()
+    private void PlayHitStop(Transform attacker)
     {
-        if (hitStopCoroutine != null)
-            StopCoroutine(hitStopCoroutine);
-        hitStopCoroutine = StartCoroutine(HitStopCoroutine());
+        // 冻结敌人自己
+        HitStopManager.FreezeAnimator(animator, hitStopFrameCount);
+
+        // 冻结攻击者
+        if (attacker != null)
+        {
+            Animator attackerAnim = attacker.GetComponentInChildren<Animator>();
+            if (attackerAnim != null)
+                HitStopManager.FreezeAnimator(attackerAnim, hitStopFrameCount);
+        }
     }
 
     private const float BlockAngle = 45f;
 
-    public void TakeDamage(string hitDirTag, Vector3 hitDirection, bool isLauncher, Transform attacker, float damage, bool powerAttack = false)
+    public bool TakeDamage(string hitDirTag, Vector3 hitDirection, bool isLauncher, Transform attacker, float damage, bool powerAttack = false)
     {
-        if (fsm.stateType == EnemyStateType.DEATH) return;
-        
+        if (fsm.stateType == EnemyStateType.DEATH) return false;
+
         // 愤怒状态下受到伤害 +20%
         var vitals = GetComponent<EnemyVitals>();
         if (vitals != null && vitals.RagePercent >= 1f)
@@ -258,19 +271,39 @@ public class EnemyFSM : MonoBehaviour
 
         Debug.Log($"[EnemyFSM.TakeDamage] 调用! damage={damage}, vitals={vitals != null}, state={fsm.stateType}, inBlock={attacker != null && Vector3.Angle(transform.forward, (attacker.position - transform.position).normalized) <= BlockAngle}");
 
+        // === 霸体判定 ===
+        bool isSuperArmor = (fsm.stateType == EnemyStateType.ATTACK
+            && skillManager != null && skillManager.CurrentSkill != null
+            && skillManager.CurrentSkill.superArmor)
+            || fsm.stateType == EnemyStateType.PARRYATTACK;
+
+        if (isSuperArmor)
+        {
+            vitals?.TakeDamage(damage);
+            vitals?.OnHitReceived();
+            if (vitals != null && vitals.IsDead)
+            {
+                fsm.SetState(EnemyStateType.DEATH);
+                return true;   // ← 扣血了
+            }
+            PlayHitStop(attacker);
+            return true;       // ← 扣血了
+        }
+
         if (fsm.stateType == EnemyStateType.BLOCKBREAK)
         {
             vitals?.TakeDamage(damage);
             if (vitals != null && vitals.IsDead)
             {
                 fsm.SetState(EnemyStateType.DEATH);
-                return;
+                return true;   // ← 扣血了
             }
             fsm.SetState(EnemyStateType.KNOCKDOWN);
-            return;
+            _blockCount = 0;
+            return true;       // ← 扣血了
         }
 
-        // Power攻击：不可格挡、不可闪避，直接造成伤害进入受击
+        // Power攻击
         if (powerAttack)
         {
             vitals?.TakeDamage(damage);
@@ -278,47 +311,52 @@ public class EnemyFSM : MonoBehaviour
             if (vitals != null && vitals.IsDead)
             {
                 fsm.SetState(EnemyStateType.DEATH);
-                return;
+                return true;   // ← 扣血了
             }
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetHitDirectionTag(hitDirTag);
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
             if (fsm.stateType == EnemyStateType.HIT)
             {
+                _blockCount = 0;
                 fsm.GetState<EnemyHitState>(EnemyStateType.HIT).Rehit();
-                PlayHitStop();
-                return;
+                PlayHitStop(attacker);
+                return true;   // ← 扣血了
             }
+            _blockCount = 0;
             fsm.SetState(EnemyStateType.HIT);
-            PlayHitStop();
-            return;
+            PlayHitStop(attacker);
+            return true;       // ← 扣血了
         }
-        // KNOCKDOWN：只扣血 + 攒怒气，不播受击动画
+
+        // KNOCKDOWN
         if (fsm.stateType == EnemyStateType.KNOCKDOWN)
         {
             vitals?.TakeDamage(damage * 2f);
             if (vitals != null && vitals.IsDead)
             {
                 fsm.SetState(EnemyStateType.DEATH);
-                return;
+                return true;   // ← 扣血了
             }
             vitals?.OnHitReceived();
-            PlayHitStop();
-            return;
+            PlayHitStop(attacker);
+            return true;       // ← 扣血了
         }
 
+        // 倒地/起身无敌
         if (fsm.stateType == EnemyStateType.FALLTOFLOOR ||
             fsm.stateType == EnemyStateType.GETUP)
         {
-            return;
+            return false;      // ← 没扣血
         }
 
+        // 浮空/空中受击
         if (isLauncher || !IsGrounded)
         {
             vitals?.TakeDamage(damage);
             if (vitals != null && vitals.IsDead)
             {
                 fsm.SetState(EnemyStateType.DEATH);
-                return;
+                return true;   // ← 扣血了
             }
             vitals?.OnHitReceived();
             fsm.GetState<EnemyAirHitState>(EnemyStateType.AIR_HIT).SetHitDirection(hitDirection);
@@ -331,11 +369,13 @@ public class EnemyFSM : MonoBehaviour
             }
             else
             {
+                _blockCount = 0;
                 fsm.SetState(EnemyStateType.AIR_HIT);
             }
-            return;
+            return true;       // ← 扣血了
         }
 
+        // 格挡/闪避判定
         bool inBlockRange = false;
         if (attacker != null)
         {
@@ -351,74 +391,83 @@ public class EnemyFSM : MonoBehaviour
         if (inBlockRange)
         {
             float roll = Random.value;
-            if (roll < 0.6f)
+            if (roll < 0.65f)
             {
-                // 格挡：不减血
+                _blockCount++;
+                if (_blockCount >= 3)
+                {
+                    _blockCount = 0;
+                    fsm.GetState<EnemyParryAttackState>(EnemyStateType.PARRYATTACK).SetAttacker(attacker);
+                    fsm.SetState(EnemyStateType.PARRYATTACK);
+                    PlayHitStop(attacker);
+                    return false;  // ← 没扣血（弹刀攻击）
+                }
                 if (fsm.stateType == EnemyStateType.BLOCK)
                 {
                     fsm.GetState<EnemyBlockState>(EnemyStateType.BLOCK).SetAttacker(attacker);
                     fsm.GetState<EnemyBlockState>(EnemyStateType.BLOCK).Rehit();
-                    PlayHitStop();
-                    return;
+                    PlayHitStop(attacker);
+                    return false;  // ← 没扣血（格挡）
                 }
                 if (fsm.stateType == EnemyStateType.HIT || fsm.stateType == EnemyStateType.DODGE)
                 {
                     fsm.GetState<EnemyBlockState>(EnemyStateType.BLOCK).SetAttacker(attacker);
                     fsm.SetState(EnemyStateType.BLOCK);
-                    PlayHitStop();
-                    return;
+                    PlayHitStop(attacker);
+                    return false;  // ← 没扣血（格挡）
                 }
                 fsm.GetState<EnemyBlockState>(EnemyStateType.BLOCK).SetAttacker(attacker);
                 fsm.SetState(EnemyStateType.BLOCK);
-                PlayHitStop();
-                return;
+                PlayHitStop(attacker);
+                return false;      // ← 没扣血（格挡）
             }
-            else if (roll < 0.7f)
+            else if (roll < 0.75f)
             {
-                // DODGE：不减血
                 if (fsm.stateType == EnemyStateType.DODGE)
                 {
                     fsm.GetState<EnemyDodgeState>(EnemyStateType.DODGE).SetAttacker(attacker);
                     fsm.GetState<EnemyDodgeState>(EnemyStateType.DODGE).Rehit();
-                    return;
+                    return false;  // ← 没扣血（闪避）
                 }
                 if (fsm.stateType == EnemyStateType.HIT || fsm.stateType == EnemyStateType.BLOCK)
                 {
                     fsm.GetState<EnemyDodgeState>(EnemyStateType.DODGE).SetAttacker(attacker);
                     fsm.SetState(EnemyStateType.DODGE);
-                    return;
+                    return false;  // ← 没扣血（闪避）
                 }
                 fsm.GetState<EnemyDodgeState>(EnemyStateType.DODGE).SetAttacker(attacker);
                 fsm.SetState(EnemyStateType.DODGE);
-                return;
+                return false;      // ← 没扣血（闪避）
             }
         }
 
-        // 普通受击：扣血 + 攒怒气
+        // 普通受击
         vitals?.TakeDamage(damage);
         vitals?.OnHitReceived();
         if (vitals != null && vitals.IsDead)
         {
             fsm.SetState(EnemyStateType.DEATH);
-            return;
+            return true;           // ← 扣血了
         }
 
         Debug.Log($"[EnemyFSM.TakeDamage] 进入普通受击, 扣血={damage}, 剩余血量={vitals?.currentHealth}");
 
         if (fsm.stateType == EnemyStateType.HIT)
         {
+            _blockCount = 0;
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetHitDirectionTag(hitDirTag);
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).Rehit();
-            PlayHitStop();
-            return;
+            PlayHitStop(attacker);
+            return true;           // ← 扣血了
         }
+        _blockCount = 0;
         fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetHitDirectionTag(hitDirTag);
         fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
         fsm.SetState(EnemyStateType.HIT);
-        PlayHitStop();
+        PlayHitStop(attacker);
+        return true;               // ← 扣血了
     }
-
     public void SetEnemyWeaponDamage(float damage)
     {
         if (enemyWeaponHitDetector != null)

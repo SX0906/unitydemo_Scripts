@@ -15,6 +15,7 @@ public enum EnemyStateType
     FALLTOFLOOR,
     KNOCKDOWN,
     LOCK_MOVE,
+    PARRYATTACK,
     DEATH
 }
 

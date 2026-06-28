@@ -9,7 +9,7 @@ public class HitState : StateBase
     private TestFSM testfsm;
     private CombatAudioPlayer audioPlayer;
 
-    private float duration = 0.05f;
+    private float duration = 0.025f;
     private float timer;
     private Transform attacker;
 

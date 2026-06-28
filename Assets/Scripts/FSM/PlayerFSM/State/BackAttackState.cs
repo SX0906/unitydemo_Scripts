@@ -13,9 +13,7 @@ public class BackAttackState : StateBase
     private float snapRotateSpeed;
     private LayerMask enemyLayers;
     private Transform snapTarget;
-    private bool hasAttackStarted;
 
-    private const string AttackTag = "Attack";
     private const string BackAttackAnim = "BackAttack";
 
     public BackAttackState(Animator animator, PlayerControl playerControl,
@@ -39,8 +37,7 @@ public class BackAttackState : StateBase
         testfsm.backAttackAvailable = false;
         testfsm.backAttackTimer = 0f;
 
-        animator.Play("BackAttack");
-        hasAttackStarted = false;
+        animator.Play(BackAttackAnim);
         snapTarget = FindSnapTarget();
     }
 
@@ -51,19 +48,9 @@ public class BackAttackState : StateBase
             SmoothRotateToSnapTarget();
         }
 
-        if (!hasAttackStarted)
-        {
-            if (IsInAttackTag())
-            {
-                hasAttackStarted = true;
-            }
-            else
-            {
-                return;
-            }
-        }
-
-        if (!IsInAttackTag())
+        // 动画播放进度 >= 80% 时跳回初始状态
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        if (stateInfo.normalizedTime >= 0.8f)
         {
             fsm.SetState(testfsm.IsLockOn ? StateType.LockOn : StateType.IDlE);
         }
@@ -71,24 +58,7 @@ public class BackAttackState : StateBase
 
     public override void OnExit()
     {
-
         snapTarget = null;
-    }
-
-    private bool IsInAttackTag()
-    {
-        if (animator == null) return false;
-
-        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(0);
-        if (current.IsTag(AttackTag)) return true;
-
-        if (animator.IsInTransition(0))
-        {
-            AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(0);
-            if (next.IsTag(AttackTag)) return true;
-        }
-
-        return false;
     }
 
     private Transform FindSnapTarget()

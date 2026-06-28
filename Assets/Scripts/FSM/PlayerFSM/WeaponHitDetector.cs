@@ -72,22 +72,27 @@ public class WeaponHitDetector : MonoBehaviour
         {
             AnimatorStateInfo state = playerAnimator.GetCurrentAnimatorStateInfo(0);
             isLauncher = state.IsName("Attack_Up_Floor_To_Air")
-                      || state.IsName("Attack_Up_Air_To_Air");
+                    || state.IsName("Attack_Up_Air_To_Air");
         }
 
-        enemy.TakeDamage(finalDirTag, dir, isLauncher, playerTransform, damage);
+        // 调用 TakeDamage 并判断是否真正造成了伤害
+        bool damaged = enemy.TakeDamage(finalDirTag, dir, isLauncher, playerTransform, damage);
 
-        // 击杀敌人 → 玩家获得击杀怒气
-        EnemyVitals enemyVitals = enemy.GetComponent<EnemyVitals>();
-        if (enemyVitals != null && enemyVitals.IsDead)
+        // 只有真正造成了伤害才加怒气
+        if (damaged)
         {
-            _playerVitals?.OnKill();
-        }
+            // 击杀敌人 → 玩家获得击杀怒气
+            EnemyVitals enemyVitals = enemy.GetComponent<EnemyVitals>();
+            if (enemyVitals != null && enemyVitals.IsDead)
+            {
+                _playerVitals?.OnKill();
+            }
 
-        // 击中敌人 → 玩家获得怒气
-        if (_playerVitals != null)
-        {
-            _playerVitals.GainRage(rageGainPerHit);
+            // 击中敌人 → 玩家获得怒气
+            if (_playerVitals != null)
+            {
+                _playerVitals.GainRage(rageGainPerHit);
+            }
         }
     }
 }

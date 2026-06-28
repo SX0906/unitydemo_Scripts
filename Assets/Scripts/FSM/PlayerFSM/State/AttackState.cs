@@ -88,7 +88,6 @@ public class AttackState : StateBase
         if (!IsInAttackTag())
         {
              fsm.SetState(testfsm.IsLockOn ? StateType.LockOn : StateType.IDlE);
-             Debug.Log("攻击结束");
             return;
         }
     }
@@ -172,4 +171,6 @@ public class AttackState : StateBase
             snapRotateSpeed * Time.deltaTime
         );
     }
+    public void OnAttackComboCheck() { }
+    public void OnAreaAttack() { }
 }

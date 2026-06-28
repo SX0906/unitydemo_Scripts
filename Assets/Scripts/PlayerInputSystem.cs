@@ -753,6 +753,17 @@ namespace GameInput
                 },
                 {
                     ""name"": """",
+                    ""id"": ""44cef109-858b-4ddd-b2ca-35bba1e1365a"",
+                    ""path"": ""<Keyboard>/c"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Dodge"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""61b4b5e4-4f76-4995-84bd-3a28af6e1304"",
                     ""path"": ""<Keyboard>/r"",
                     ""interactions"": """",

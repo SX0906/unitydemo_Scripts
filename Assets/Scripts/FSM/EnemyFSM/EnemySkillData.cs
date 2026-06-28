@@ -48,6 +48,10 @@ public class EnemySkillData : ScriptableObject
     [Header("是否可用")]
     public bool isAvailable = true;
 
+    [Header("霸体")]
+    [Tooltip("开启后，释放此技能期间受到攻击不会中断技能、不会触发格挡/闪避，但仍会正常受伤")]
+    public bool superArmor = false;
+
     [Header("Animator 层级")]
     public int animatorLayer = 0;
 
