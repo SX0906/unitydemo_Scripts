@@ -33,7 +33,7 @@ public class TestFSM : MonoBehaviour
     public float VerticalVelocity { get; set; }
 
     [Header("相机控制")]
-    public PlayerCameraController cameraController;
+    public FSMCamera cameraController;
     public Transform lookRoot;
     public Transform _lockOnTarget;
 
@@ -183,7 +183,7 @@ public class TestFSM : MonoBehaviour
 
         // === Attack输入处理 ===
         if (fsm.stateType != StateType.JUMP && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
-            &&fsm.stateType!= StateType.AIRTOFLOORATTACK)
+            &&fsm.stateType!= StateType.AIRTOFLOORATTACK && fsm.stateType != StateType.BACKATTACK)
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
@@ -191,10 +191,12 @@ public class TestFSM : MonoBehaviour
                 if (backAttackAvailable && backAttackTimer > 0f)
                 {
                     fsm.SetState(StateType.BACKATTACK);
+                    Debug.Log("触发反击");
                     return;
                 }
 
-                if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02)
+                if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
+                    && fsm.stateType != StateType.BACKATTACK)
                 {
                     switch (currentComboSet)
                     {
@@ -283,7 +285,6 @@ public class TestFSM : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("体力不足，无法闪避");
                 }
             }
         }
@@ -375,7 +376,8 @@ public class TestFSM : MonoBehaviour
         if (fsm.stateType != StateType.ATTACK_01 && fsm.stateType != StateType.ATTACK_02
             && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
             && fsm.stateType != StateType.DODGE && fsm.stateType != StateType.JUMP
-            && fsm.stateType != StateType.AIRTOFLOORATTACK)
+            && fsm.stateType != StateType.AIRTOFLOORATTACK
+            && fsm.stateType != StateType.BACKATTACK)
         {
             if (moveInput == Vector2.zero)
             {
@@ -470,6 +472,17 @@ public class TestFSM : MonoBehaviour
         if (fsm.stateType == StateType.POWER)
         {
             // Power 状态下玩家无敌，直接忽略伤害
+            return;
+        }
+
+        if (fsm.stateType == StateType.BACKATTACK)
+        {
+            playerVitals.TakeDamage(damage);
+            
+            if (playerVitals.IsDead)
+            {
+                fsm.SetState(StateType.DEATH);
+            }
             return;
         }
 

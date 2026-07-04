@@ -17,7 +17,6 @@ public class EnemyIdleState : EnemyStateBase
     public override void OnEnter()
     {
         animator.CrossFade("BaseMotion", 0.05f);
-        Debug.Log("进入Idle状态");
         animator.SetFloat("speed", 0f);
     }
 

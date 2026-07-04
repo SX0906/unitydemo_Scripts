@@ -15,6 +15,7 @@ public class IdleState : StateBase
     public override void OnEnter()
     {
         animator.CrossFade("BaseMotion",0.02f);
+        Debug.Log("进入Idle状态");
         animator.SetFloat("speed", 0f);
         animator.SetFloat("MoveX", 0f);
         animator.SetFloat("MoveY", 0f);

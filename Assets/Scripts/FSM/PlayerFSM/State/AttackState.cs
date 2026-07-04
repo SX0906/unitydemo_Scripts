@@ -71,7 +71,6 @@ public class AttackState : StateBase
         if (playerControl.Player.Attack.WasPressedThisFrame())
         {
             animator.SetTrigger(attackTrigger);
-            Debug.Log("开始连击");
         }
         if (!hasAttackStarted)
         {

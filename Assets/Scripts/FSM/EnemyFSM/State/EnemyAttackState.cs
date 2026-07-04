@@ -64,7 +64,6 @@ public class EnemyAttackState : EnemyStateBase
         if (isLastState && stateInfo.normalizedTime >= currentSkill.finishNormalizedTime)
         {
             var skillMgr = enemyFSM.GetComponent<EnemySkillManager>();
-            Debug.Log("正常退出");
             skillMgr?.FinishCast();
             fsm.SetState(EnemyStateType.IDLE);
             return;
@@ -74,7 +73,6 @@ public class EnemyAttackState : EnemyStateBase
         if (stateInfo.IsTag(currentSkill.stateTag)&&!isLastState && stateInfo.normalizedTime >= 0.95f && !IsInSkillStates(stateInfo))
         {
             var skillMgr = enemyFSM.GetComponent<EnemySkillManager>();
-            Debug.Log("出现意外退出");
             skillMgr?.FinishCast();
             fsm.SetState(EnemyStateType.IDLE);
         }

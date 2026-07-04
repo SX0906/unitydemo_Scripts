@@ -9,7 +9,7 @@ public class HitState : StateBase
     private TestFSM testfsm;
     private CombatAudioPlayer audioPlayer;
 
-    private float duration = 0.025f;
+    private float duration = 0.01f;
     private float timer;
     private Transform attacker;
 
@@ -34,6 +34,7 @@ public class HitState : StateBase
 
     public override void OnEnter()
     {
+        Debug.Log("进入受击状态");
         timer = duration;
         audioPlayer?.PlayHitSound();
     }

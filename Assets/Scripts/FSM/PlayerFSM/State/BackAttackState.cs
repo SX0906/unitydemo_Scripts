@@ -38,6 +38,7 @@ public class BackAttackState : StateBase
         testfsm.backAttackTimer = 0f;
 
         animator.Play(BackAttackAnim);
+        Debug.Log("进入反击状态");
         snapTarget = FindSnapTarget();
     }
 
@@ -47,11 +48,13 @@ public class BackAttackState : StateBase
         {
             SmoothRotateToSnapTarget();
         }
-
+        Debug.Log("反击进行中");
         // 动画播放进度 >= 80% 时跳回初始状态
         AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-        if (stateInfo.normalizedTime >= 0.8f)
+        Debug.Log($"反击动画进度: {stateInfo.normalizedTime}");
+        if (stateInfo.normalizedTime >= 0.7f)
         {
+            Debug.Log("反击结束，回到初始状态");
             fsm.SetState(testfsm.IsLockOn ? StateType.LockOn : StateType.IDlE);
         }
     }
