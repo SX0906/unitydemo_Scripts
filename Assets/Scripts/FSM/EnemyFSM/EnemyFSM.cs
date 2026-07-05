@@ -187,13 +187,16 @@ public class EnemyFSM : MonoBehaviour
         bool detectedThisFrame = false;
         RaycastHit detectedHit = default;
 
+        float sphereRadius = 0.3f;
+
         for (int i = 0; i < visionRayCount; i++)
         {
             float currentAngle = -halfAngle + (visionAngle / (visionRayCount - 1)) * i;
             Vector3 rayDir = Quaternion.Euler(0f, currentAngle, 0f) * transform.forward;
             rayDir.y = 0f;
 
-            if (Physics.Raycast(rayOrigin, rayDir.normalized, out RaycastHit hit, visionRange))
+            if (Physics.SphereCast(rayOrigin, sphereRadius, rayDir.normalized,
+                out RaycastHit hit, visionRange))
             {
                 if ((playerLayer.value & (1 << hit.collider.gameObject.layer)) != 0)
                 {
@@ -268,8 +271,6 @@ public class EnemyFSM : MonoBehaviour
         var vitals = GetComponent<EnemyVitals>();
         if (vitals != null && vitals.RagePercent >= 1f)
             damage *= 1.2f;
-
-        Debug.Log($"[EnemyFSM.TakeDamage] 调用! damage={damage}, vitals={vitals != null}, state={fsm.stateType}, inBlock={attacker != null && Vector3.Angle(transform.forward, (attacker.position - transform.position).normalized) <= BlockAngle}");
 
         // === 霸体判定 ===
         bool isSuperArmor = (fsm.stateType == EnemyStateType.ATTACK
@@ -450,7 +451,6 @@ public class EnemyFSM : MonoBehaviour
             return true;           // ← 扣血了
         }
 
-        Debug.Log($"[EnemyFSM.TakeDamage] 进入普通受击, 扣血={damage}, 剩余血量={vitals?.currentHealth}");
 
         if (fsm.stateType == EnemyStateType.HIT)
         {

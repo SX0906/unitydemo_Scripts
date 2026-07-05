@@ -14,7 +14,9 @@ public class LockOnState : StateBase
 
     public override void OnEnter()
     {
-       animator.SetFloat("LockOn", 1f);
+        Debug.Log("进入锁定状态");
+        animator.CrossFade("BaseMotion", 0.02f);
+        animator.SetFloat("LockOn", 1f);
     }
     public override void OnUpdate()
     {

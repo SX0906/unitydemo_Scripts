@@ -49,7 +49,7 @@ public class BackAttackState : StateBase
             SmoothRotateToSnapTarget();
         }
         Debug.Log("反击进行中");
-        // 动画播放进度 >= 80% 时跳回初始状态
+        // 动画播放进度 >= 70% 时跳回初始状态
         AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
         Debug.Log($"反击动画进度: {stateInfo.normalizedTime}");
         if (stateInfo.normalizedTime >= 0.7f)
@@ -62,6 +62,10 @@ public class BackAttackState : StateBase
     public override void OnExit()
     {
         snapTarget = null;
+        if (animator != null)
+        {
+            animator.CrossFade("BaseMotion", 0f);
+        }
     }
 
     private Transform FindSnapTarget()
