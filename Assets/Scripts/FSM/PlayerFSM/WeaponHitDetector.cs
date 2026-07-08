@@ -7,6 +7,7 @@ public class WeaponHitDetector : MonoBehaviour
     private HashSet<EnemyFSM> _hitTargets = new HashSet<EnemyFSM>();
     private Collider _weaponCollider;
     private ActorVitals _playerVitals;
+    private HitEffectSpawner _hitEffectSpawner;   // ← 新增
 
     [Header("伤害")]
     public float damage = 10f;
@@ -26,6 +27,7 @@ public class WeaponHitDetector : MonoBehaviour
         }
 
         _playerVitals = GetComponentInParent<ActorVitals>();
+        _hitEffectSpawner = GetComponent<HitEffectSpawner>();   // ← 新增
     }
 
     public void OnHitWindowOpen(string dirTag)
@@ -54,6 +56,9 @@ public class WeaponHitDetector : MonoBehaviour
         if (_hitTargets.Contains(enemy)) return;
         _hitTargets.Add(enemy);
 
+        // ← 新增：生成命中特效
+        _hitEffectSpawner?.SpawnAtContact(other);
+
         Vector3 dir = enemy.transform.position - transform.position;
         dir.y = 0;
         if (dir.magnitude < 0.01f) dir = transform.root.forward;
@@ -75,20 +80,16 @@ public class WeaponHitDetector : MonoBehaviour
                     || state.IsName("Attack_Up_Air_To_Air");
         }
 
-        // 调用 TakeDamage 并判断是否真正造成了伤害
         bool damaged = enemy.TakeDamage(finalDirTag, dir, isLauncher, playerTransform, damage);
 
-        // 只有真正造成了伤害才加怒气
         if (damaged)
         {
-            // 击杀敌人 → 玩家获得击杀怒气
             EnemyVitals enemyVitals = enemy.GetComponent<EnemyVitals>();
             if (enemyVitals != null && enemyVitals.IsDead)
             {
                 _playerVitals?.OnKill();
             }
 
-            // 击中敌人 → 玩家获得怒气
             if (_playerVitals != null)
             {
                 _playerVitals.GainRage(rageGainPerHit);

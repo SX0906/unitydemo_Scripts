@@ -11,6 +11,7 @@ public class EnemyWeaponHitDetector : MonoBehaviour
     private EnemyVitals _enemyVitals;
     private HashSet<TestFSM> _hitTargets = new HashSet<TestFSM>();
     private Collider _weaponCollider;
+    private HitEffectSpawner _hitEffectSpawner;   // ← 新增
 
     [Header("伤害倍率")]
     public float damageMultiplier = 1f;
@@ -25,6 +26,7 @@ public class EnemyWeaponHitDetector : MonoBehaviour
         }
 
         _enemyVitals = GetComponentInParent<EnemyVitals>();
+        _hitEffectSpawner = GetComponent<HitEffectSpawner>();   // ← 新增
     }
 
     /// <summary>由 EnemyFSM.SetEnemyWeaponDamage 调用，设置当前连击段伤害</summary>
@@ -60,6 +62,9 @@ public class EnemyWeaponHitDetector : MonoBehaviour
 
         if (_hitTargets.Contains(player)) return;
         _hitTargets.Add(player);
+
+        // ← 新增：生成命中特效
+        _hitEffectSpawner?.SpawnAtContact(other);
 
         float finalDamage = _currentDamage * damageMultiplier;
         if (_enemyVitals != null && _enemyVitals.RagePercent >= 1f)
