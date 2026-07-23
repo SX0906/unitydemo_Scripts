@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using Unity.Cinemachine;
 public class EnemyParryAttackState : EnemyStateBase
 {
     private Animator animator;
@@ -46,6 +46,9 @@ public class EnemyParryAttackState : EnemyStateBase
 
         // 播放弹刀动画
         animator.CrossFadeInFixedTime("Parry_Attack", 0f, 0);
+        
+        CinemachineImpulseSource impulseSource = enemyFSM.GetComponent<CinemachineImpulseSource>();
+        impulseSource?.GenerateImpulse();
 
         // 攒架势
         enemyFSM.GetComponent<EnemyVitals>()?.GainPostureOnBlock(0f);

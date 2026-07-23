@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using Unity.Cinemachine;
 public class EnemyBlockState : EnemyStateBase
 {
     private Animator animator;
@@ -69,6 +69,8 @@ public class EnemyBlockState : EnemyStateBase
             animator.CrossFadeInFixedTime("Parry_L", 0f, 0);
             audioPlayer.PlayParrySound();
         }
+        CinemachineImpulseSource impulseSource = enemyFSM.GetComponent<CinemachineImpulseSource>();
+        impulseSource?.GenerateImpulse();
         enemyFSM.GetComponent<EnemyVitals>()?.GainPostureOnBlock(0f);
         timer = duration;
     }
