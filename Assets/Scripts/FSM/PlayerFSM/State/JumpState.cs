@@ -39,7 +39,7 @@ public class JumpState : StateBase
         }
         else
         {
-            animator.SetTrigger("Jump");
+            animator.Play("Jump_Start", 0, 0f);
             testfsm.VerticalVelocity = jumpForce;
             jumpHeld = true;
             isLanding = false;
@@ -137,7 +137,6 @@ public class JumpState : StateBase
     public override void OnExit()
     {
         isLanding = false;
-        animator.ResetTrigger("Jump");
         animator.ResetTrigger("Land");
     }
 

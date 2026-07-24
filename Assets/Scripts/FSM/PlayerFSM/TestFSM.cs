@@ -341,7 +341,9 @@ public class TestFSM : MonoBehaviour
         {
             if (fsm.stateType == StateType.IDlE ||
                 fsm.stateType == StateType.MOVE ||
-                fsm.stateType == StateType.LockOn)
+                fsm.stateType == StateType.LockOn ||
+                fsm.stateType == StateType.ATTACK_01 ||
+                fsm.stateType == StateType.ATTACK_02)
             {
                 if (IsGrounded)
                 {
