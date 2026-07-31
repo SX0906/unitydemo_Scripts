@@ -264,6 +264,15 @@ namespace GameInput
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Zoom"",
+                    ""type"": ""Value"",
+                    ""id"": ""5db33c29-006f-4b40-8e50-844b9903c093"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -772,6 +781,17 @@ namespace GameInput
                     ""action"": ""Power"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""59164cb6-c325-4a10-805c-6fc69416f3ed"",
+                    ""path"": ""<Mouse>/scroll"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Zoom"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -792,7 +812,7 @@ namespace GameInput
                     ""name"": ""Submit"",
                     ""type"": ""Button"",
                     ""id"": ""7607c7b6-cd76-4816-beef-bd0341cfe950"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -801,7 +821,7 @@ namespace GameInput
                     ""name"": ""Cancel"",
                     ""type"": ""Button"",
                     ""id"": ""15cef263-9014-4fd5-94d9-4e4a6234a6ef"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -1376,6 +1396,7 @@ namespace GameInput
             m_Player_RAtk = m_Player.FindAction("RAtk", throwIfNotFound: true);
             m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
             m_Player_Power = m_Player.FindAction("Power", throwIfNotFound: true);
+            m_Player_Zoom = m_Player.FindAction("Zoom", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1488,6 +1509,7 @@ namespace GameInput
         private readonly InputAction m_Player_RAtk;
         private readonly InputAction m_Player_Dodge;
         private readonly InputAction m_Player_Power;
+        private readonly InputAction m_Player_Zoom;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1576,6 +1598,10 @@ namespace GameInput
             /// </summary>
             public InputAction @Power => m_Wrapper.m_Player_Power;
             /// <summary>
+            /// Provides access to the underlying input action "Player/Zoom".
+            /// </summary>
+            public InputAction @Zoom => m_Wrapper.m_Player_Zoom;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -1658,6 +1684,9 @@ namespace GameInput
                 @Power.started += instance.OnPower;
                 @Power.performed += instance.OnPower;
                 @Power.canceled += instance.OnPower;
+                @Zoom.started += instance.OnZoom;
+                @Zoom.performed += instance.OnZoom;
+                @Zoom.canceled += instance.OnZoom;
             }
 
             /// <summary>
@@ -1726,6 +1755,9 @@ namespace GameInput
                 @Power.started -= instance.OnPower;
                 @Power.performed -= instance.OnPower;
                 @Power.canceled -= instance.OnPower;
+                @Zoom.started -= instance.OnZoom;
+                @Zoom.performed -= instance.OnZoom;
+                @Zoom.canceled -= instance.OnZoom;
             }
 
             /// <summary>
@@ -2159,6 +2191,13 @@ namespace GameInput
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnPower(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Zoom" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnZoom(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.
