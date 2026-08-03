@@ -8,6 +8,7 @@ public class DeathState : StateBase
 
     private bool animFinished;
     private float holdTimer;
+    private TestFSM_test testFSM_test;
     private const float holdDuration = 3f;
     private const string DeathAnim = "Hit_Death";
 
@@ -16,6 +17,13 @@ public class DeathState : StateBase
         this.animator = animator;
         this.fsm = fsm;
         this.testfsm = testfsm;
+    }
+
+    public DeathState(Animator animator, FSMControl fsm, TestFSM_test testFSM_test)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.testFSM_test = testFSM_test;
     }
 
     public override void OnEnter()

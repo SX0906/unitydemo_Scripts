@@ -20,6 +20,12 @@ public class AirAttackState : StateBase
     private LayerMask enemyLayers;
     private Transform snapTarget;
     private PlayerVitals playerVitals;
+    private TestFSM_test testFSM_test;
+    private Collider weaponCol;
+    private float attackSnapDistance;
+    private float attackSnapAngle;
+    private float attackSnapRotateSpeed;
+
     private const float AirAttackStaminaCost = 3f;
 
     public AirAttackState(Animator animator, PlayerControl playerControl,
@@ -37,6 +43,20 @@ public class AirAttackState : StateBase
         this.snapRotateSpeed = snapRotateSpeed;
         this.enemyLayers = testfsm.targetLayers;
     }
+
+    public AirAttackState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, CharacterController controller, Collider weaponCol, float attackSnapDistance, float attackSnapAngle, float attackSnapRotateSpeed)
+    {
+        this.animator = animator;
+        this.playerControl = playerControl;
+        this.fsm = fsm;
+        this.testFSM_test = testFSM_test;
+        this.controller = controller;
+        this.weaponCol = weaponCol;
+        this.attackSnapDistance = attackSnapDistance;
+        this.attackSnapAngle = attackSnapAngle;
+        this.attackSnapRotateSpeed = attackSnapRotateSpeed;
+    }
+
 
     public override void OnEnter()
     {

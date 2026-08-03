@@ -12,6 +12,8 @@ public class EnemyFallToFloorState : EnemyStateBase
 
     private enum Phase { Start, Loop, End }
     private Phase phase;
+    private EnemyFSM_test enemyFSM_test;
+
 
     public EnemyFallToFloorState(Animator animator, EnemyFSMControl fsm,
         EnemyFSM enemyFSM, CharacterController controller)
@@ -21,6 +23,15 @@ public class EnemyFallToFloorState : EnemyStateBase
         this.enemyFSM = enemyFSM;
         this.controller = controller;
     }
+
+    public EnemyFallToFloorState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, CharacterController controller)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.enemyFSM_test = enemyFSM_test;
+        this.controller = controller;
+    }
+
 
     public override void OnEnter()
     {

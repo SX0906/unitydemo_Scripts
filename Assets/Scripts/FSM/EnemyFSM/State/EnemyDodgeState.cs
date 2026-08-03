@@ -11,6 +11,8 @@ public class EnemyDodgeState : EnemyStateBase
     private float duration = 0.8f;
     private float timer;
     private Vector3 dodgeDirection;
+    private EnemyFSM_test enemyFSM_test;
+
 
     public EnemyDodgeState(Animator animator, EnemyFSMControl fsm,
         EnemyFSM enemyFSM, Transform transform, CharacterController controller)
@@ -21,6 +23,16 @@ public class EnemyDodgeState : EnemyStateBase
         this.transform = transform;
         this.controller = controller;
     }
+
+    public EnemyDodgeState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, Transform transform, CharacterController controller)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.enemyFSM_test = enemyFSM_test;
+        this.transform = transform;
+        this.controller = controller;
+    }
+
 
     public void SetAttacker(Transform attackerTransform)
     {

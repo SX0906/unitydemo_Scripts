@@ -15,6 +15,8 @@ public class EnemyParryAttackState : EnemyStateBase
 
     [Header("弹刀伤害")]
     public float parryDamage = 15f;
+    private EnemyFSM_test enemyFSM_test;
+
 
     public EnemyParryAttackState(Animator animator, EnemyFSMControl fsm,
         EnemyFSM enemyFSM, Transform transform, CombatAudioPlayer audioPlayer)
@@ -25,6 +27,16 @@ public class EnemyParryAttackState : EnemyStateBase
         this.transform = transform;
         this.audioPlayer = audioPlayer;
     }
+
+    public EnemyParryAttackState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, Transform transform, CombatAudioPlayer audioPlayer)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.enemyFSM_test = enemyFSM_test;
+        this.transform = transform;
+        this.audioPlayer = audioPlayer;
+    }
+
 
     public void SetAttacker(Transform attackerTransform)
     {

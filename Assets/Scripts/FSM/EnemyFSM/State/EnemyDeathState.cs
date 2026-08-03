@@ -11,6 +11,7 @@ public class EnemyDeathState : EnemyStateBase
     private bool animFrozen;
     private float holdTimer;
     private float verticalVelocity;
+    private EnemyFSM_test enemyFSM_test;
     private const float holdDuration = 3f;
     private const float maxFallSpeed = 20f;
     private const string DeathAnim = "Hit_Death";
@@ -21,6 +22,14 @@ public class EnemyDeathState : EnemyStateBase
         this.animator = animator;
         this.fsm = fsm;
         this.enemyFSM = enemyFSM;
+        this.controller = controller;
+    }
+
+    public EnemyDeathState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, CharacterController controller)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.enemyFSM_test = enemyFSM_test;
         this.controller = controller;
     }
 

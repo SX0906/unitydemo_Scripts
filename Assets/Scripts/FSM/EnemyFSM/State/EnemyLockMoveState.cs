@@ -36,6 +36,7 @@ public class EnemyLockMoveState : EnemyStateBase
 
     private Vector3 smoothWorldMoveDir = Vector3.zero;
     private float moveDirSmoothSpeed = 8f;
+    private EnemyFSM_test enemyFSM_test;
 
     public EnemyLockMoveState(Animator animator, EnemyFSMControl fsm,
         Transform transform, CharacterController controller, EnemyFSM enemyFSM)
@@ -45,6 +46,15 @@ public class EnemyLockMoveState : EnemyStateBase
         this.transform = transform;
         this.controller = controller;
         this.enemyFSM = enemyFSM;
+    }
+
+    public EnemyLockMoveState(Animator animator, EnemyFSMControl fsm, Transform transform, CharacterController controller, EnemyFSM_test enemyFSM_test)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.transform = transform;
+        this.controller = controller;
+        this.enemyFSM_test = enemyFSM_test;
     }
 
     public override void OnEnter()

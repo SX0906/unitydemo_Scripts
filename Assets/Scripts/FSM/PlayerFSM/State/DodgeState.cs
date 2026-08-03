@@ -9,7 +9,7 @@ public class DodgeState : StateBase
     private TestFSM testfsm;
     private PlayerVitals playerVitals;
     private bool currentAnimStarted;
-
+    private TestFSM_test testFSM_test;
     private const string DodgeAnimName = "Dodge";
 
     public DodgeState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM testfsm,PlayerVitals playerVitals)
@@ -20,6 +20,16 @@ public class DodgeState : StateBase
         this.testfsm = testfsm;
         this.playerVitals = playerVitals;
     }
+
+    public DodgeState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, PlayerVitals playerVitals)
+    {
+        this.animator = animator;
+        this.playerControl = playerControl;
+        this.fsm = fsm;
+        this.testFSM_test = testFSM_test;
+        this.playerVitals = playerVitals;
+    }
+
     public override void OnEnter()
     {
         if (playerVitals != null)                    

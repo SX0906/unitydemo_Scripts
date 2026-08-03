@@ -16,6 +16,7 @@ public class JumpState : StateBase
     private float airMoveSpeed = 4f;
     private float airRunSpeed = 6f;
     private float rotationVelocity;
+    private TestFSM_test testFSM_test;
 
     public JumpState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM testfsm, CharacterController controller)
     {
@@ -23,6 +24,15 @@ public class JumpState : StateBase
         this.playerControl = playerControl;
         this.fsm = fsm;
         this.testfsm = testfsm;
+        this.controller = controller;
+    }
+
+    public JumpState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, CharacterController controller)
+    {
+        this.animator = animator;
+        this.playerControl = playerControl;
+        this.fsm = fsm;
+        this.testFSM_test = testFSM_test;
         this.controller = controller;
     }
 

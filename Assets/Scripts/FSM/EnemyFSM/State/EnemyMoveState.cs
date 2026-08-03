@@ -10,6 +10,8 @@ public class EnemyMoveState : EnemyStateBase
     private float moveSpeed = 1.2f;
     private float gravity = -20f;
     private float verticalVelocity;
+    private EnemyFSMControl fsm;
+    private EnemyFSM_test enemyFSM_test;
 
     public EnemyMoveState(Animator animator, EnemyFSMControl fsm,
         Transform transform, CharacterController controller, EnemyFSM enemyFSM)
@@ -18,6 +20,15 @@ public class EnemyMoveState : EnemyStateBase
         this.transform = transform;
         this.controller = controller;
         this.enemyFSM = enemyFSM;
+    }
+
+    public EnemyMoveState(Animator animator, EnemyFSMControl fsm, Transform transform, CharacterController controller, EnemyFSM_test enemyFSM_test)
+    {
+        this.animator = animator;
+        this.fsm = fsm;
+        this.transform = transform;
+        this.controller = controller;
+        this.enemyFSM_test = enemyFSM_test;
     }
 
     public override void OnEnter()
