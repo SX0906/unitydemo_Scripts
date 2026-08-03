@@ -12,8 +12,6 @@ public class HitState : StateBase
     private float duration = 0.01f;
     private float timer;
     private Transform attacker;
-    private TestFSM_test testFSM_test;
-
 
     public HitState(FSMControl fsm, TestFSM testfsm)
     {
@@ -21,13 +19,6 @@ public class HitState : StateBase
         this.testfsm = testfsm;
         this.audioPlayer = testfsm.GetComponent<CombatAudioPlayer>();
     }
-
-    public HitState(FSMControl fsm, TestFSM_test testFSM_test)
-    {
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
-    }
-
 
     public void SetHitInfo(Transform attackerTransform)
     {

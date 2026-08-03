@@ -13,11 +13,6 @@ public class BackAttackState : StateBase
     private float snapRotateSpeed;
     private LayerMask enemyLayers;
     private Transform snapTarget;
-    private TestFSM_test testFSM_test;
-    private Collider weaponCol;
-    private float attackSnapDistance;
-    private float attackSnapAngle;
-    private float attackSnapRotateSpeed;
     private const string BackAttackAnim = "BackAttack";
 
     public BackAttackState(Animator animator, PlayerControl playerControl,
@@ -34,19 +29,6 @@ public class BackAttackState : StateBase
         this.snapRotateSpeed = snapRotateSpeed;
         this.enemyLayers = testfsm.targetLayers;
     }
-
-    public BackAttackState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, Collider weaponCol, float attackSnapDistance, float attackSnapAngle, float attackSnapRotateSpeed)
-    {
-        this.animator = animator;
-        this.playerControl = playerControl;
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
-        this.weaponCol = weaponCol;
-        this.attackSnapDistance = attackSnapDistance;
-        this.attackSnapAngle = attackSnapAngle;
-        this.attackSnapRotateSpeed = attackSnapRotateSpeed;
-    }
-
 
     public override void OnEnter()
     {

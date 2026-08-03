@@ -25,15 +25,6 @@ public class EnemyBlockBreakState : EnemyStateBase
         this.audioPlayer = audioPlayer;
     }
 
-    public EnemyBlockBreakState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, Transform transform, CombatAudioPlayer audioPlayer)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.enemyFSM_test = enemyFSM_test;
-        this.transform = transform;
-        this.audioPlayer = audioPlayer;
-    }
-
 
     public override void OnEnter()
     {

@@ -18,13 +18,6 @@ public class AttackState : StateBase
     private float snapRotateSpeed;
     private LayerMask enemyLayers;
     private Transform snapTarget;
-    private TestFSM_test testFSM_test;
-    private string v;
-    private Collider weaponCol;
-    private float attackSnapDistance;
-    private float attackSnapAngle;
-    private float attackSnapRotateSpeed;
-
 
     public AttackState(Animator animator, PlayerControl playerControl, 
         FSMControl fsm, TestFSM testfsm, string attackTrigger = "LAtk", Collider weaponCollider = null,
@@ -41,20 +34,6 @@ public class AttackState : StateBase
         this.snapRotateSpeed = snapRotateSpeed;
         this.enemyLayers = testfsm.targetLayers;
     }
-
-    public AttackState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, string v, Collider weaponCol, float attackSnapDistance, float attackSnapAngle, float attackSnapRotateSpeed)
-    {
-        this.animator = animator;
-        this.playerControl = playerControl;
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
-        this.v = v;
-        this.weaponCol = weaponCol;
-        this.attackSnapDistance = attackSnapDistance;
-        this.attackSnapAngle = attackSnapAngle;
-        this.attackSnapRotateSpeed = attackSnapRotateSpeed;
-    }
-
 
     public override void OnEnter()
     {

@@ -5,8 +5,6 @@ public class LockOnState : StateBase
     private Animator animator;
     private TestFSM testFSM;
     private FSMControl fsm;
-    private TestFSM_test testFSM_test;
-
 
     public LockOnState(Animator animator, FSMControl fsm ,TestFSM testFSM)
     {
@@ -14,14 +12,6 @@ public class LockOnState : StateBase
         this.testFSM = testFSM;
         this.fsm = fsm;
     }
-
-    public LockOnState(Animator animator, FSMControl fsm, TestFSM_test testFSM_test)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
-    }
-
 
     public override void OnEnter()
     {

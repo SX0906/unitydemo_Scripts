@@ -5,7 +5,6 @@ public class EnemyGetUpState : EnemyStateBase
     private Animator animator;
     private EnemyFSMControl fsm;
     private EnemyFSM enemyFSM;
-    private EnemyFSM_test enemyFSM_test;
 
 
     public EnemyGetUpState(Animator animator, EnemyFSMControl fsm, EnemyFSM enemyFSM)
@@ -14,14 +13,6 @@ public class EnemyGetUpState : EnemyStateBase
         this.fsm = fsm;
         this.enemyFSM = enemyFSM;
     }
-
-    public EnemyGetUpState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.enemyFSM_test = enemyFSM_test;
-    }
-
 
     public override void OnEnter()
     {

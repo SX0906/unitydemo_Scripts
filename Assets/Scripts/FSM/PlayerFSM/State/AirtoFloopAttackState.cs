@@ -22,7 +22,6 @@ public class AirtoFloopAttackState : StateBase
     private const string EndAnim   = "Attack_Air_to_Floor_End";
 
     private bool hasDealtDamage;
-    private TestFSM_test testFSM_test;
 
     public AirtoFloopAttackState(Animator animator, PlayerControl playerControl,
         FSMControl fsm, TestFSM testfsm, CharacterController controller)
@@ -31,15 +30,6 @@ public class AirtoFloopAttackState : StateBase
         this.playerControl = playerControl;
         this.fsm = fsm;
         this.testfsm = testfsm;
-        this.controller = controller;
-    }
-
-    public AirtoFloopAttackState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test, CharacterController controller)
-    {
-        this.animator = animator;
-        this.playerControl = playerControl;
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
         this.controller = controller;
     }
 

@@ -11,7 +11,6 @@ public class MoveState : StateBase
 
     private float walkSpeed = 1f;
     private float runSpeed = 1.5f;
-    private TestFSM_test testFSM_test;
 
 
     public MoveState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM testFsm)
@@ -21,15 +20,6 @@ public class MoveState : StateBase
         this.fsm = fsm;
         this.testFsm = testFsm;
     }
-
-    public MoveState(Animator animator, PlayerControl playerControl, FSMControl fsm, TestFSM_test testFSM_test)
-    {
-        this.animator = animator;
-        this.playerControl = playerControl;
-        this.fsm = fsm;
-        this.testFSM_test = testFSM_test;
-    }
-
 
     public override void OnEnter()
     {

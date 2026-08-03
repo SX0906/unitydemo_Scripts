@@ -10,8 +10,6 @@ public class EnemyBlockState : EnemyStateBase
     private Transform transform;
     private float duration = 0.3f;
     private float timer;
-    private EnemyFSM_test enemyFSM_test;
-
 
     public EnemyBlockState(Animator animator, EnemyFSMControl fsm,
         EnemyFSM enemyFSM, Transform transform,CombatAudioPlayer audioPlayer)
@@ -19,15 +17,6 @@ public class EnemyBlockState : EnemyStateBase
         this.animator = animator;
         this.fsm = fsm;
         this.enemyFSM = enemyFSM;
-        this.transform = transform;
-        this.audioPlayer = audioPlayer;
-    }
-
-    public EnemyBlockState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test, Transform transform, CombatAudioPlayer audioPlayer)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.enemyFSM_test = enemyFSM_test;
         this.transform = transform;
         this.audioPlayer = audioPlayer;
     }

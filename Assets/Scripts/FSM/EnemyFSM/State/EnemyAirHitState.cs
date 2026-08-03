@@ -21,8 +21,6 @@ public class EnemyAirHitState : EnemyStateBase
     private Transform playerTransform;
     private float yOffsetFromPlayer;
     private bool isFollowingPlayer;
-    private EnemyFSM_test enemyFSM_test;
-
 
     public EnemyAirHitState(Animator animator, EnemyFSMControl fsm,
         Transform transform, CharacterController controller, EnemyFSM enemyFSM, CombatAudioPlayer audioPlayer)
@@ -34,17 +32,6 @@ public class EnemyAirHitState : EnemyStateBase
         this.enemyFSM = enemyFSM;
         this.audioPlayer = audioPlayer;
     }
-
-    public EnemyAirHitState(Animator animator, EnemyFSMControl fsm, Transform transform, CharacterController controller, EnemyFSM_test enemyFSM_test, CombatAudioPlayer audioPlayer)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.transform = transform;
-        this.controller = controller;
-        this.enemyFSM_test = enemyFSM_test;
-        this.audioPlayer = audioPlayer;
-    }
-
 
     public void SetHitDirection(Vector3 worldDir)
     {

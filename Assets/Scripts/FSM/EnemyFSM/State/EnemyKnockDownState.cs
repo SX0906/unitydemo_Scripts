@@ -10,7 +10,6 @@ public class EnemyKnockDownState : EnemyStateBase
     private Phase phase;
     private float loopTimer;
     private float loopDuration = 10f;
-    private EnemyFSM_test enemyFSM_test;
 
 
     public EnemyKnockDownState(Animator animator, EnemyFSMControl fsm, EnemyFSM enemyFSM)
@@ -18,13 +17,6 @@ public class EnemyKnockDownState : EnemyStateBase
         this.animator = animator;
         this.fsm = fsm;
         this.enemyFSM = enemyFSM;
-    }
-
-    public EnemyKnockDownState(Animator animator, EnemyFSMControl fsm, EnemyFSM_test enemyFSM_test)
-    {
-        this.animator = animator;
-        this.fsm = fsm;
-        this.enemyFSM_test = enemyFSM_test;
     }
 
 
