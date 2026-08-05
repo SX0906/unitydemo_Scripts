@@ -109,6 +109,9 @@ public class TestFSM : MonoBehaviour
         fsm.AddState(StateType.DEATH,new DeathState(animator,fsm,this));
         
         fsm.SetState(StateType.IDlE);
+
+        if (GetComponent<PauseMenu>() == null)
+            gameObject.AddComponent<PauseMenu>();
     }
 
     private void OnEnable()
@@ -499,6 +502,15 @@ public class TestFSM : MonoBehaviour
     public Vector2 GetMoveInput()
     {
         return playerControl.Player.Move.ReadValue<Vector2>();
+    }
+
+    public void SetInputActive(bool active)
+    {
+        if (playerControl == null) return;
+        if (active)
+            playerControl.Player.Enable();
+        else
+            playerControl.Player.Disable();
     }
 
     // === 公开方法：受击 ===

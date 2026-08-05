@@ -17,6 +17,7 @@ public class EnemyFSM : MonoBehaviour
 
     [Header("测试模式")]
     public bool testMode = false;
+    public static bool TestModeEnabled;
 
     [Header("视野参数")]
     public float visionRange = 8f;
@@ -78,6 +79,7 @@ public class EnemyFSM : MonoBehaviour
         skillManager = GetComponent<EnemySkillManager>();
         enemyWeaponHitDetector = GetComponentInChildren<EnemyWeaponHitDetector>();
         fsm = new EnemyFSMControl();
+        testMode = TestModeEnabled;
 
         // 顿帧管理器宿主注册
         HitStopManager.EnsureHost(this);
