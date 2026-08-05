@@ -19,6 +19,13 @@ public class AttackState : StateBase
     private LayerMask enemyLayers;
     private Transform snapTarget;
 
+    // 连击预输入
+    private bool hasBufferedNextAttack;
+    private bool comboWindowOpen;
+    private float bufferedTime;
+    private int currentAttackStateHash;
+    private const float ComboBufferDuration = 0.25f;
+
     public AttackState(Animator animator, PlayerControl playerControl, 
         FSMControl fsm, TestFSM testfsm, string attackTrigger = "LAtk", Collider weaponCollider = null,
         float snapDistance = 2.5f, float snapAngle = 100f, float snapRotateSpeed = 720f)
@@ -40,6 +47,11 @@ public class AttackState : StateBase
         animator.SetTrigger(attackTrigger);
         hasAttackStarted = false;
         snapTarget = FindSnapTarget();
+
+        hasBufferedNextAttack = false;
+        comboWindowOpen = false;
+        bufferedTime = 0f;
+        currentAttackStateHash = 0;
     }
 
     public override void OnUpdate()
@@ -68,10 +80,16 @@ public class AttackState : StateBase
             }
         }
 
+        UpdateCurrentAttackStateHash();
+
         if (playerControl.Player.Attack.WasPressedThisFrame())
         {
-            animator.SetTrigger(attackTrigger);
+            hasBufferedNextAttack = true;
+            bufferedTime = Time.time;
         }
+
+        TickAttackBuffer();
+
         if (!hasAttackStarted)
         {
             if (IsInAttackTag())
@@ -95,6 +113,77 @@ public class AttackState : StateBase
     {
         animator.ResetTrigger(attackTrigger);
         snapTarget = null;
+        hasBufferedNextAttack = false;
+        comboWindowOpen = false;
+        bufferedTime = 0f;
+        currentAttackStateHash = 0;
+    }
+
+    public void OnComboWindowOpen()
+    {
+        comboWindowOpen = true;
+        TryConsumeBufferedAttack();
+    }
+
+    public void OnComboWindowClose()
+    {
+        comboWindowOpen = false;
+        hasBufferedNextAttack = false;
+    }
+
+    private void UpdateCurrentAttackStateHash()
+    {
+        if (animator == null) return;
+
+        int hash = GetCurrentOrNextAttackStateHash();
+        if (hash == currentAttackStateHash) return;
+
+        if (currentAttackStateHash != 0)
+        {
+            hasBufferedNextAttack = false;
+            bufferedTime = 0f;
+        }
+
+        currentAttackStateHash = hash;
+    }
+
+    private int GetCurrentOrNextAttackStateHash()
+    {
+        if (animator == null) return 0;
+
+        if (animator.IsInTransition(0))
+        {
+            AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(0);
+            if (next.IsTag(AttackTag)) return next.fullPathHash;
+        }
+
+        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(0);
+        return current.IsTag(AttackTag) ? current.fullPathHash : 0;
+    }
+
+    private void TickAttackBuffer()
+    {
+        if (!hasBufferedNextAttack) return;
+
+        if (Time.time - bufferedTime > ComboBufferDuration)
+        {
+            hasBufferedNextAttack = false;
+            bufferedTime = 0f;
+            return;
+        }
+
+        TryConsumeBufferedAttack();
+    }
+
+    private void TryConsumeBufferedAttack()
+    {
+        if (!hasBufferedNextAttack || !comboWindowOpen || animator == null) return;
+        if (!IsInAttackTag()) return;
+
+        animator.SetTrigger(attackTrigger);
+        hasBufferedNextAttack = false;
+        bufferedTime = 0f;
+        comboWindowOpen = false;
     }
 
     private bool IsInAttackTag()

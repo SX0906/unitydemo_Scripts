@@ -13,6 +13,13 @@ public class AirAttackState : StateBase
     private const string AirAttackTag = "AirAttack";
     private bool currentAnimStarted;
 
+    // 连击预输入
+    private bool hasBufferedNextAttack;
+    private bool comboWindowOpen;
+    private float bufferedTime;
+    private int currentAttackStateHash;
+    private const float ComboBufferDuration = 0.35f;
+
     // 攻击吸附参数
     private float snapDistance;
     private float snapAngle;
@@ -45,6 +52,11 @@ public class AirAttackState : StateBase
         currentAnimStarted = false;
         animator.Play("Combo_Attack_Air_01", 0, 0f);
         snapTarget = FindSnapTarget();
+
+        hasBufferedNextAttack = false;
+        comboWindowOpen = false;
+        bufferedTime = 0f;
+        currentAttackStateHash = 0;
     }
 
     public override void OnUpdate()
@@ -56,28 +68,25 @@ public class AirAttackState : StateBase
 
         AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
 
+        UpdateCurrentAttackStateHash();
+
+        if (playerControl.Player.Attack.WasPressedThisFrame())
+        {
+            hasBufferedNextAttack = true;
+            bufferedTime = Time.time;
+        }
+
+        if (TickAirAttackBuffer())
+        {
+            return;
+        }
+
         if (!currentAnimStarted)
         {
             if (state.IsTag(AirAttackTag) && state.normalizedTime > 0f)
                 currentAnimStarted = true;
             else
                 return;
-        }
-
-        if (playerControl.Player.Attack.WasPressedThisFrame())
-        {
-            if (playerVitals == null || playerVitals.UseStamina(AirAttackStaminaCost))
-            {
-                animator.SetTrigger(AirAttackTrigger);
-                currentAnimStarted = false;
-            }
-            else
-            {
-                // 体力不足 → 进入下落动画
-                testfsm.JumpSoftEnter = true;
-                fsm.SetState(StateType.JUMP);
-            }
-            return;
         }
 
         if (state.IsTag(AirAttackTag) && state.normalizedTime >= 1f && !animator.IsInTransition(0))
@@ -99,6 +108,97 @@ public class AirAttackState : StateBase
         animator.ResetTrigger(AirAttackTrigger);
         currentAnimStarted = false;
         snapTarget = null;
+        CloseComboWindow();
+        currentAttackStateHash = 0;
+    }
+
+    public void OnComboWindowOpen()
+    {
+        comboWindowOpen = true;
+    }
+
+    public void OnComboWindowClose()
+    {
+        CloseComboWindow();
+    }
+
+    private void UpdateCurrentAttackStateHash()
+    {
+        if (animator == null) return;
+
+        int hash = GetCurrentOrNextAirAttackStateHash();
+        if (hash == currentAttackStateHash) return;
+
+        if (currentAttackStateHash != 0)
+            ClearBufferedInput();
+
+        currentAttackStateHash = hash;
+    }
+
+    private int GetCurrentOrNextAirAttackStateHash()
+    {
+        if (animator == null) return 0;
+
+        if (animator.IsInTransition(0))
+        {
+            AnimatorStateInfo next = animator.GetNextAnimatorStateInfo(0);
+            if (next.IsTag(AirAttackTag)) return next.fullPathHash;
+        }
+
+        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(0);
+        return current.IsTag(AirAttackTag) ? current.fullPathHash : 0;
+    }
+
+    private bool IsInAirAttackTag()
+    {
+        if (animator == null) return false;
+
+        AnimatorStateInfo current = animator.GetCurrentAnimatorStateInfo(0);
+        if (current.IsTag(AirAttackTag)) return true;
+
+        if (animator.IsInTransition(0))
+            return animator.GetNextAnimatorStateInfo(0).IsTag(AirAttackTag);
+
+        return false;
+    }
+
+    private bool TickAirAttackBuffer()
+    {
+        if (!hasBufferedNextAttack) return false;
+
+        if (Time.time - bufferedTime > ComboBufferDuration)
+        {
+            ClearBufferedInput();
+            return false;
+        }
+
+        if (!currentAnimStarted || !comboWindowOpen || !IsInAirAttackTag()) return false;
+
+        if (playerVitals != null && !playerVitals.UseStamina(AirAttackStaminaCost))
+        {
+            CloseComboWindow();
+            testfsm.JumpSoftEnter = true;
+            fsm.SetState(StateType.JUMP);
+            return true;
+        }
+
+        animator.SetTrigger(AirAttackTrigger);
+        currentAnimStarted = false;
+        comboWindowOpen = false;
+        ClearBufferedInput();
+        return true;
+    }
+
+    private void ClearBufferedInput()
+    {
+        hasBufferedNextAttack = false;
+        bufferedTime = 0f;
+    }
+
+    private void CloseComboWindow()
+    {
+        comboWindowOpen = false;
+        ClearBufferedInput();
     }
 
     /// <summary>

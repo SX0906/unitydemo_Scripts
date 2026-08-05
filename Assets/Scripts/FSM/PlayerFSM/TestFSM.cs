@@ -571,11 +571,31 @@ public class TestFSM : MonoBehaviour
     public void OnHitWindowOpen(string dirTag)
     {
         weaponHitDetector?.OnHitWindowOpen(dirTag);
+
+        StateBase currentState = fsm.GetCurrentState();
+        if (currentState is AttackState attackState)
+        {
+            attackState.OnComboWindowOpen();
+        }
+        else if (currentState is AirAttackState airAttackState)
+        {
+            airAttackState.OnComboWindowOpen();
+        }
     }
 
     public void OnHitWindowClose()
     {
         weaponHitDetector?.OnHitWindowClose();
+
+        StateBase currentState = fsm.GetCurrentState();
+        if (currentState is AttackState attackState)
+        {
+            attackState.OnComboWindowClose();
+        }
+        else if (currentState is AirAttackState airAttackState)
+        {
+            airAttackState.OnComboWindowClose();
+        }
     }
 
     // === Timeline Signal 调用：Power 技能的每次范围伤害 ===
