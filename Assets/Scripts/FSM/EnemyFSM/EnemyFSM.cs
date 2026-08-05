@@ -45,6 +45,13 @@ public class EnemyFSM : MonoBehaviour
 
     public bool IsGrounded => CheckGrounded();
     public LayerMask PlayerLayer => playerLayer;   // 供EnemyAttackState范围检测用
+    public bool IsSupportedByActor => controller != null && ActorCollisionEscape.IsSupportedByActor(controller);
+
+    public void FallOffActor(Vector3 fallDirection, float fallSpeed)
+    {
+        if (controller != null)
+            ActorCollisionEscape.MoveOffActor(controller, fallDirection, fallSpeed);
+    }
 
     private bool CheckGrounded()
     {
@@ -123,10 +130,19 @@ public class EnemyFSM : MonoBehaviour
 
     private void Update()
     {
+        ActorCollisionEscape.Tick(controller);
+
         if (fsm.stateType == EnemyStateType.DEATH)
         {
             fsm.OnTick();
             return;
+        }
+
+        if (IsSupportedByActor &&
+            fsm.stateType != EnemyStateType.FALLTOFLOOR &&
+            fsm.stateType != EnemyStateType.AIR_HIT)
+        {
+            ActorCollisionEscape.MoveOffActor(controller, Vector3.zero, 8f);
         }
 
         if (testMode)

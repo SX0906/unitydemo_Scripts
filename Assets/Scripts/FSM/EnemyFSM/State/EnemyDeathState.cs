@@ -36,13 +36,21 @@ public class EnemyDeathState : EnemyStateBase
     public override void OnUpdate()
     {
         // 空中下落
-        if (!hasLanded && !controller.isGrounded)
+        if (!hasLanded && !enemyFSM.IsGrounded)
         {
             verticalVelocity += Physics.gravity.y * Time.deltaTime;
-            float step = Mathf.Max(verticalVelocity, -maxFallSpeed) * Time.deltaTime;
-            controller.Move(new Vector3(0f, step, 0f));
+            float fallSpeed = Mathf.Min(Mathf.Max(-verticalVelocity, 0f), maxFallSpeed);
+            if (fallSpeed > 0f && enemyFSM.IsSupportedByActor)
+            {
+                enemyFSM.FallOffActor(Vector3.zero, fallSpeed);
+            }
+            else
+            {
+                float step = Mathf.Max(verticalVelocity, -maxFallSpeed) * Time.deltaTime;
+                controller.Move(new Vector3(0f, step, 0f));
+            }
         }
-        else if (!hasLanded && controller.isGrounded)
+        else if (!hasLanded && enemyFSM.IsGrounded)
         {
             hasLanded = true;
         }

@@ -64,8 +64,15 @@ public class AirtoFloopAttackState : StateBase
     private void UpdateLoop()
     {
         // 手动控制向下位移（Loop动画本身没有Y轴下降，水平也不位移）
-        Vector3 move = Vector3.down * slamSpeed * Time.deltaTime;
-        controller.Move(move);
+        if (testfsm.IsSupportedByActor)
+        {
+            testfsm.FallOffActor(Vector3.zero, slamSpeed);
+        }
+        else
+        {
+            Vector3 move = Vector3.down * slamSpeed * Time.deltaTime;
+            controller.Move(move);
+        }
 
         // 检测落地 → 进入End
         if (testfsm.IsGrounded)

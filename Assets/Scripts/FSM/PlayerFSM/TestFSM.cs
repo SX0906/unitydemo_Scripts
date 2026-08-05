@@ -121,6 +121,8 @@ public class TestFSM : MonoBehaviour
 
     private void Update()
     {
+        ActorCollisionEscape.Tick(controller);
+
         // 受击状态、死亡、Power下不处理其他输入
         if (fsm.stateType == StateType.HIT || fsm.stateType == StateType.DEATH)
         {
@@ -131,6 +133,15 @@ public class TestFSM : MonoBehaviour
         // Power状态下只跑Tick，不处理任何其他输入
         if (fsm.stateType == StateType.POWER)
         {
+            fsm.OnTick();
+            return;
+        }
+
+        if (IsSupportedByActor &&
+            (fsm.stateType == StateType.IDlE || fsm.stateType == StateType.MOVE || fsm.stateType == StateType.LockOn))
+        {
+            JumpSoftEnter = true;
+            fsm.SetState(StateType.JUMP);
             fsm.OnTick();
             return;
         }
@@ -444,6 +455,14 @@ public class TestFSM : MonoBehaviour
             float checkDist = controller.height / 2f - controller.radius + groundCheckDistance;
             return Physics.SphereCast(origin, radius, Vector3.down, out _, checkDist, groundLayer);
         }
+    }
+
+    public bool IsSupportedByActor => controller != null && ActorCollisionEscape.IsSupportedByActor(controller);
+
+    public void FallOffActor(Vector3 fallDirection, float fallSpeed)
+    {
+        if (controller != null)
+            ActorCollisionEscape.MoveOffActor(controller, fallDirection, fallSpeed);
     }
 
     public Vector2 GetMoveInput()

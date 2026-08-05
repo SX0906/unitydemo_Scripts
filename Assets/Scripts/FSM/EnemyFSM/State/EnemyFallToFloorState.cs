@@ -49,7 +49,9 @@ public class EnemyFallToFloorState : EnemyStateBase
 
                 Vector3 move = new Vector3(0,fallSpeed*Time.deltaTime,0);
 
-                if (controller != null && controller.enabled)
+                if (enemyFSM.IsSupportedByActor)
+                    enemyFSM.FallOffActor(Vector3.zero, -fallSpeed);
+                else if (controller != null && controller.enabled)
                     controller.Move(move);
                 else
                     enemyFSM.transform.position += move;

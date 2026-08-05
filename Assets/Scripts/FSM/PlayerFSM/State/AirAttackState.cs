@@ -95,7 +95,7 @@ public class AirAttackState : StateBase
             fsm.SetState(StateType.JUMP);
         }
 
-        if (controller.isGrounded)
+        if (testfsm.IsGrounded)
         {
             fsm.SetState(testfsm.IsLockOn ? StateType.LockOn : StateType.IDlE);
             return;
