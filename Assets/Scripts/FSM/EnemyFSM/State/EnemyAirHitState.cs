@@ -150,11 +150,7 @@ public class EnemyAirHitState : EnemyStateBase
             }
         }
 
-        if (isFalling && deltaY <= 0f && enemyFSM.IsSupportedByActor)
-        {
-            enemyFSM.FallOffActor(Vector3.zero, -deltaY);
-        }
-        else if (controller != null && controller.enabled)
+        if (controller != null && controller.enabled)
         {
             controller.Move(new Vector3(0, deltaY, 0));
         }

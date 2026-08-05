@@ -21,12 +21,14 @@ public class EnemyFSM : MonoBehaviour
     [Header("视野参数")]
     public float visionRange = 8f;
     public float visionAngle = 120f;
+    [Range(0f, 90f)] public float visionVerticalHalfAngle = 45f;
     public float loseRange = 10f;
 
     [Header("玩家检测")]
     [SerializeField] private LayerMask playerLayer;
     [SerializeField] private float visionHeightOffset = 1f;
     [SerializeField] private int visionRayCount = 10;
+    [SerializeField] private int visionVerticalRayCount = 3;
 
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
@@ -45,13 +47,6 @@ public class EnemyFSM : MonoBehaviour
 
     public bool IsGrounded => CheckGrounded();
     public LayerMask PlayerLayer => playerLayer;   // 供EnemyAttackState范围检测用
-    public bool IsSupportedByActor => controller != null && ActorCollisionEscape.IsSupportedByActor(controller);
-
-    public void FallOffActor(Vector3 fallDirection, float fallSpeed)
-    {
-        if (controller != null)
-            ActorCollisionEscape.MoveOffActor(controller, fallDirection, fallSpeed);
-    }
 
     private bool CheckGrounded()
     {
@@ -132,17 +127,14 @@ public class EnemyFSM : MonoBehaviour
     {
         ActorCollisionEscape.Tick(controller);
 
+        // 全局兜底：任何状态下只要脚底有其它角色，忽略碰撞并斜向弹开下落
+        if (ActorCollisionEscape.IsOverlappingActor(controller, out int otherLayer))
+            ActorCollisionEscape.ResolveOverlap(controller, otherLayer);
+
         if (fsm.stateType == EnemyStateType.DEATH)
         {
             fsm.OnTick();
             return;
-        }
-
-        if (IsSupportedByActor &&
-            fsm.stateType != EnemyStateType.FALLTOFLOOR &&
-            fsm.stateType != EnemyStateType.AIR_HIT)
-        {
-            ActorCollisionEscape.MoveOffActor(controller, Vector3.zero, 8f);
         }
 
         if (testMode)
@@ -204,21 +196,35 @@ public class EnemyFSM : MonoBehaviour
         RaycastHit detectedHit = default;
 
         float sphereRadius = 0.3f;
+        int verticalSegments = Mathf.Max(1, visionVerticalRayCount - 1);
 
-        for (int i = 0; i < visionRayCount; i++)
+        for (int i = 0; i < visionRayCount && !detectedThisFrame; i++)
         {
             float currentAngle = -halfAngle + (visionAngle / (visionRayCount - 1)) * i;
-            Vector3 rayDir = Quaternion.Euler(0f, currentAngle, 0f) * transform.forward;
-            rayDir.y = 0f;
+            Vector3 horizontalForward = transform.forward;
+            horizontalForward.y = 0f;
+            horizontalForward.Normalize();
+            if (horizontalForward.sqrMagnitude < 0.001f)
+                horizontalForward = Vector3.forward;
 
-            if (Physics.SphereCast(rayOrigin, sphereRadius, rayDir.normalized,
-                out RaycastHit hit, visionRange))
+            for (int j = 0; j <= verticalSegments && !detectedThisFrame; j++)
             {
-                if ((playerLayer.value & (1 << hit.collider.gameObject.layer)) != 0)
+                float pitch = Mathf.Lerp(
+                    -visionVerticalHalfAngle,
+                    visionVerticalHalfAngle,
+                    (float)j / verticalSegments);
+                Vector3 rayDir = Quaternion.Euler(pitch, currentAngle, 0f) * horizontalForward;
+                rayDir.Normalize();
+
+                if (Physics.SphereCast(rayOrigin, sphereRadius, rayDir,
+                    out RaycastHit hit, visionRange))
                 {
-                    detectedThisFrame = true;
-                    detectedHit = hit;
-                    break;
+                    if ((playerLayer.value & (1 << hit.collider.gameObject.layer)) != 0)
+                    {
+                        detectedThisFrame = true;
+                        detectedHit = hit;
+                        break;
+                    }
                 }
             }
         }

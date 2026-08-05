@@ -66,15 +66,8 @@ public class JumpState : StateBase
             if (allowAirMove)
                 horizontalMove = GetAirMovement();
 
-            if (testfsm.IsSupportedByActor && testfsm.VerticalVelocity <= 0f)
-            {
-                testfsm.FallOffActor(horizontalMove, -testfsm.VerticalVelocity);
-            }
-            else
-            {
-                Vector3 move = new Vector3(horizontalMove.x, testfsm.VerticalVelocity, horizontalMove.z) * Time.deltaTime;
-                controller.Move(move);
-            }
+            Vector3 move = new Vector3(horizontalMove.x, testfsm.VerticalVelocity, horizontalMove.z) * Time.deltaTime;
+            controller.Move(move);
 
             if(testfsm.IsGrounded && testfsm.VerticalVelocity <= 0f)
             {

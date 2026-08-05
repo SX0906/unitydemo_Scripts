@@ -4,132 +4,108 @@ using UnityEngine;
 public static class ActorCollisionEscape
 {
     private static readonly LayerMask ActorMask = LayerMask.GetMask("Player", "Enemy");
-
     private const float IgnoreDuration = 0.2f;
-    private const float DefaultEscapeSpeed = 3f;
+    private const float DefaultEscapeSpeed = 5f;
+    private const float DefaultFallSpeed = 6f;
 
     private sealed class IgnoreEntry
     {
         public CharacterController Self;
-        public Transform SupportRoot;
+        public int SavedExcludeLayers;
+        public int OtherLayer;
         public float StartTime;
     }
 
-    private static readonly Dictionary<int, IgnoreEntry> IgnoreEntries = new Dictionary<int, IgnoreEntry>();
+    private static readonly Dictionary<int, IgnoreEntry> Entries = new Dictionary<int, IgnoreEntry>();
 
-    public static bool IsSupportedByActor(CharacterController controller)
+    public static bool IsOverlappingActor(CharacterController controller, out int otherLayer)
     {
-        return TryGetSupportCollider(controller, out _);
+        otherLayer = -1;
+        if (controller == null || !controller.enabled) return false;
+
+        Vector3 footPos = GetFootPosition(controller);
+        float checkRadius = Mathf.Max(0.06f, controller.radius * 1.2f);
+
+        Collider[] hits = Physics.OverlapSphere(footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
+        foreach (Collider hit in hits)
+        {
+            if (hit == null) continue;
+            if (hit.transform.root == controller.transform.root) continue;
+            if (!IsActorCollider(hit)) continue;
+
+            otherLayer = hit.gameObject.layer;
+            return true;
+        }
+        return false;
     }
 
-    public static bool MoveOffActor(CharacterController controller, Vector3 horizontalVelocity, float fallSpeed)
+    public static void ResolveOverlap(CharacterController controller, int otherLayer)
     {
-        if (controller == null || !controller.enabled)
-            return false;
+        if (controller == null || !controller.enabled || otherLayer < 0) return;
 
-        if (!TryGetSupportCollider(controller, out Collider support))
-            return false;
-
-        Transform supportRoot = support.transform.root;
-        int key = GetPairKey(controller, supportRoot);
-
-        if (!IgnoreEntries.TryGetValue(key, out IgnoreEntry entry))
+        int key = controller.GetInstanceID();
+        if (!Entries.TryGetValue(key, out IgnoreEntry entry))
         {
             entry = new IgnoreEntry
             {
                 Self = controller,
-                SupportRoot = supportRoot,
+                SavedExcludeLayers = controller.excludeLayers,
+                OtherLayer = otherLayer,
                 StartTime = Time.unscaledTime
             };
-            IgnoreColliders(controller, supportRoot, true);
-            IgnoreEntries.Add(key, entry);
+            Entries[key] = entry;
         }
-
-        Vector3 horizontal = horizontalVelocity;
-        horizontal.y = 0f;
-
-        if (horizontal.sqrMagnitude < 0.0001f)
+        else
         {
-            Vector3 away = controller.transform.position - supportRoot.position;
-            away.y = 0f;
-            horizontal = away.sqrMagnitude > 0.0001f
-                ? away.normalized * DefaultEscapeSpeed
-                : Vector3.zero;
+            entry.OtherLayer = otherLayer;
+            entry.StartTime = Time.unscaledTime;
         }
 
-        Vector3 motion = horizontal + Vector3.down * Mathf.Max(0f, fallSpeed);
+        controller.excludeLayers = entry.SavedExcludeLayers | (1 << otherLayer);
+
+        Vector3 away = Vector3.zero;
+        Vector3 footPos = GetFootPosition(controller);
+        float checkRadius = Mathf.Max(0.06f, controller.radius * 1.2f);
+        Collider[] hits = Physics.OverlapSphere(footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
+        foreach (Collider hit in hits)
+        {
+            if (hit == null || hit.transform.root == controller.transform.root) continue;
+            if (!IsActorCollider(hit)) continue;
+            Vector3 dir = controller.transform.position - hit.transform.root.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.0001f) { away = dir.normalized; break; }
+        }
+        if (away.sqrMagnitude < 0.0001f) away = controller.transform.forward;
+
+        Vector3 motion = away * DefaultEscapeSpeed + (-controller.transform.up) * DefaultFallSpeed;
         controller.Move(motion * Time.deltaTime);
-        return true;
     }
 
     public static void Tick(CharacterController controller)
     {
-        if (IgnoreEntries.Count == 0 || controller == null)
-            return;
+        if (Entries.Count == 0 || controller == null) return;
 
-        List<int> removeKeys = null;
+        int key = controller.GetInstanceID();
+        if (!Entries.TryGetValue(key, out IgnoreEntry entry)) return;
 
-        foreach (KeyValuePair<int, IgnoreEntry> pair in IgnoreEntries)
+        if (entry.Self == null)
         {
-            IgnoreEntry entry = pair.Value;
-            if (entry.Self != controller)
-                continue;
-
-            if (entry.Self == null || entry.SupportRoot == null)
-            {
-                (removeKeys ??= new List<int>()).Add(pair.Key);
-                continue;
-            }
-
-            if (Time.unscaledTime - entry.StartTime < IgnoreDuration)
-                continue;
-
-            IgnoreColliders(controller, entry.SupportRoot, false);
-            (removeKeys ??= new List<int>()).Add(pair.Key);
+            Entries.Remove(key);
+            return;
         }
 
-        if (removeKeys == null)
-            return;
+        if (Time.unscaledTime - entry.StartTime < IgnoreDuration) return;
 
-        foreach (int key in removeKeys)
-            IgnoreEntries.Remove(key);
+        controller.excludeLayers = entry.SavedExcludeLayers;
+        Entries.Remove(key);
     }
 
-    private static bool TryGetSupportCollider(CharacterController controller, out Collider support)
+    private static Vector3 GetFootPosition(CharacterController controller)
     {
-        support = null;
-
-        if (controller == null || !controller.enabled)
-            return false;
-
-        Vector3 origin = controller.transform.TransformPoint(controller.center);
-        float radius = Mathf.Max(0.05f, controller.radius * 0.8f);
-        float distance = Mathf.Max(0.2f, controller.height * 0.5f - controller.radius + 0.15f);
-
-        RaycastHit[] hits = Physics.SphereCastAll(
-            origin,
-            radius,
-            Vector3.down,
-            distance,
-            ActorMask,
-            QueryTriggerInteraction.Ignore);
-
-        foreach (RaycastHit hit in hits)
-        {
-            if (hit.collider == null)
-                continue;
-
-            if (hit.collider.transform.root == controller.transform.root)
-                continue;
-
-            if (!IsActorCollider(hit.collider))
-                continue;
-
-            support = hit.collider;
-            return true;
-        }
-
-        return false;
+        Vector3 center = controller.transform.TransformPoint(controller.center);
+        float halfHeight = controller.height * 0.5f;
+        float footOffset = halfHeight;
+        return center - controller.transform.up * footOffset;
     }
 
     private static bool IsActorCollider(Collider collider)
@@ -137,25 +113,5 @@ public static class ActorCollisionEscape
         return collider.GetComponentInParent<TestFSM>() != null
             || collider.GetComponentInParent<EnemyFSM>() != null
             || collider.GetComponentInParent<ActorBase>() != null;
-    }
-
-    private static void IgnoreColliders(CharacterController self, Transform supportRoot, bool ignore)
-    {
-        if (self == null || supportRoot == null)
-            return;
-
-        Collider[] colliders = supportRoot.GetComponentsInChildren<Collider>(true);
-        foreach (Collider other in colliders)
-        {
-            if (other == null || other == self || other.isTrigger)
-                continue;
-
-            Physics.IgnoreCollision(self, other, ignore);
-        }
-    }
-
-    private static int GetPairKey(CharacterController self, Transform supportRoot)
-    {
-        return (self.GetInstanceID() * 397) ^ supportRoot.GetInstanceID();
     }
 }

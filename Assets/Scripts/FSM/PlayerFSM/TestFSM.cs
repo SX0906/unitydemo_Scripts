@@ -62,6 +62,8 @@ public class TestFSM : MonoBehaviour
     [Header("地面检测")]
     [SerializeField] private LayerMask groundLayer = ~0;
     [SerializeField] private float groundCheckDistance = 0.15f;
+    [SerializeField] private float fallEnterDelay = 0.08f;
+    private float notGroundedTime;
     
     [Header("顿帧效果")]
     //public float hitStopTimeScale = 0.1f;       // 命中时时间缩放
@@ -123,7 +125,10 @@ public class TestFSM : MonoBehaviour
     {
         ActorCollisionEscape.Tick(controller);
 
-        // 受击状态、死亡、Power下不处理其他输入
+        // 全局兜底：任何状态下只要脚底有其它角色，忽略碰撞并斜向弹开下落
+        if (ActorCollisionEscape.IsOverlappingActor(controller, out int otherLayer))
+            ActorCollisionEscape.ResolveOverlap(controller, otherLayer);
+
         if (fsm.stateType == StateType.HIT || fsm.stateType == StateType.DEATH)
         {
             fsm.OnTick();
@@ -137,16 +142,29 @@ public class TestFSM : MonoBehaviour
             return;
         }
 
-        if (IsSupportedByActor &&
-            (fsm.stateType == StateType.IDlE || fsm.stateType == StateType.MOVE || fsm.stateType == StateType.LockOn))
+        Vector2 moveInput = playerControl.Player.Move.ReadValue<Vector2>();
+
+        FollowGroundOnSlope();
+
+        bool isGrounded = IsGrounded;
+        if (isGrounded)
+        {
+            notGroundedTime = 0f;
+        }
+        else
+        {
+            notGroundedTime += Time.deltaTime;
+        }
+
+        // 地面移动/待机/锁定状态离开平台后，进入空中下落动画，避免继续播移动或待机动画
+        if (!isGrounded && notGroundedTime >= fallEnterDelay &&
+            (fsm.stateType == StateType.IDlE ||
+             fsm.stateType == StateType.MOVE ||
+             fsm.stateType == StateType.LockOn))
         {
             JumpSoftEnter = true;
             fsm.SetState(StateType.JUMP);
-            fsm.OnTick();
-            return;
         }
-
-        Vector2 moveInput = playerControl.Player.Move.ReadValue<Vector2>();
 
         // 反击计时器倒计时
         if (backAttackAvailable)
@@ -445,6 +463,27 @@ public class TestFSM : MonoBehaviour
         return best;
     }
 
+    private void FollowGroundOnSlope()
+    {
+        if (controller == null || !controller.enabled) return;
+        if (fsm.stateType != StateType.IDlE &&
+            fsm.stateType != StateType.MOVE &&
+            fsm.stateType != StateType.LockOn) return;
+
+        float maxGap = controller.stepOffset + groundCheckDistance;
+        float probeHeight = maxGap + 0.02f;
+        Vector3 origin = transform.position + Vector3.up * probeHeight;
+
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, probeHeight + maxGap, groundLayer))
+        {
+            float gap = transform.position.y - hit.point.y;
+            if (gap > 0.001f)
+            {
+                controller.Move(Vector3.down * Mathf.Min(gap, maxGap));
+            }
+        }
+    }
+
     public bool IsGrounded
     {
         get
@@ -455,14 +494,6 @@ public class TestFSM : MonoBehaviour
             float checkDist = controller.height / 2f - controller.radius + groundCheckDistance;
             return Physics.SphereCast(origin, radius, Vector3.down, out _, checkDist, groundLayer);
         }
-    }
-
-    public bool IsSupportedByActor => controller != null && ActorCollisionEscape.IsSupportedByActor(controller);
-
-    public void FallOffActor(Vector3 fallDirection, float fallSpeed)
-    {
-        if (controller != null)
-            ActorCollisionEscape.MoveOffActor(controller, fallDirection, fallSpeed);
     }
 
     public Vector2 GetMoveInput()
