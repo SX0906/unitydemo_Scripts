@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using GameInput;
 
 public class AirAttackState : StateBase
@@ -70,7 +70,7 @@ public class AirAttackState : StateBase
 
         UpdateCurrentAttackStateHash();
 
-        if (playerControl.Player.Attack.WasPressedThisFrame())
+        if (currentAnimStarted && playerControl.Player.Attack.WasPressedThisFrame())
         {
             hasBufferedNextAttack = true;
             bufferedTime = Time.time;

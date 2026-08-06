@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using GameInput;
 
 public class AttackState : StateBase
@@ -82,7 +82,7 @@ public class AttackState : StateBase
 
         UpdateCurrentAttackStateHash();
 
-        if (playerControl.Player.Attack.WasPressedThisFrame())
+        if (hasAttackStarted && playerControl.Player.Attack.WasPressedThisFrame())
         {
             hasBufferedNextAttack = true;
             bufferedTime = Time.time;
