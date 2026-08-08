@@ -8,7 +8,6 @@ using UnityEngine.UI;
 using TMPro;
 using GameInput;
 
-[RequireComponent(typeof(TestFSM))]
 public class PauseMenu : MonoBehaviour
 {
     private TestFSM testFSM;
@@ -24,6 +23,11 @@ public class PauseMenu : MonoBehaviour
         fontSample = FindFirstObjectByType<TextMeshProUGUI>();
         BuildPauseUI();
         pausePanel.SetActive(false);
+    }
+
+    public void Initialize(TestFSM owner)
+    {
+        testFSM = owner;
     }
 
     private void Update()

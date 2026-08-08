@@ -110,8 +110,12 @@ public class TestFSM : MonoBehaviour
         
         fsm.SetState(StateType.IDlE);
 
-        if (GetComponent<PauseMenu>() == null)
-            gameObject.AddComponent<PauseMenu>();
+        if (FindFirstObjectByType<PauseMenu>() == null)
+        {
+            var pauseGo = new GameObject("PauseMenu");
+            var pauseMenu = pauseGo.AddComponent<PauseMenu>();
+            pauseMenu.Initialize(this);
+        }
     }
 
     private void OnEnable()
@@ -331,16 +335,7 @@ public class TestFSM : MonoBehaviour
         {
             if (_isLockOn)
             {
-                _isLockOn = false;
-                _lockOnTarget = null;
-                animator.SetFloat("LockOn", 0f);
-                if (cameraController != null)
-                {
-                    cameraController.isLockOn = false;
-                    cameraController.lockOnTarget = null;
-                }
-                if (fsm.stateType == StateType.LockOn)
-                    fsm.SetState(StateType.IDlE);
+                ExitLockOn();
             }
             else
             {
@@ -432,21 +427,34 @@ public class TestFSM : MonoBehaviour
     {
         if (!_isLockOn || _lockOnTarget == null) return;
 
+        var vitals = _lockOnTarget.GetComponentInParent<EnemyVitals>();
+        if (vitals != null && vitals.IsDead)
+        {
+            Debug.Log("自动退出锁定：目标已死亡");
+            ExitLockOn();
+            return;
+        }
+
         float dist = Vector3.Distance(transform.position, _lockOnTarget.position);
         if (dist > lockOnMaxRange)
         {
             Debug.Log($"自动退出锁定：目标距离 {dist:F1}m，超过最大范围 {lockOnMaxRange}m");
-            _isLockOn = false;
-            _lockOnTarget = null;
-            animator.SetFloat("LockOn", 0f);
-            if (cameraController != null)
-            {
-                cameraController.isLockOn = false;
-                cameraController.lockOnTarget = null;
-            }
-            if (fsm.stateType == StateType.LockOn)
-                fsm.SetState(StateType.IDlE);
+            ExitLockOn();
         }
+    }
+
+    private void ExitLockOn()
+    {
+        _isLockOn = false;
+        _lockOnTarget = null;
+        animator.SetFloat("LockOn", 0f);
+        if (cameraController != null)
+        {
+            cameraController.isLockOn = false;
+            cameraController.lockOnTarget = null;
+        }
+        if (fsm.stateType == StateType.LockOn)
+            fsm.SetState(StateType.IDlE);
     }
 
     private Transform FindNearestEnemy()
@@ -456,6 +464,9 @@ public class TestFSM : MonoBehaviour
         float bestDist = float.MaxValue;
         foreach (var col in cols)
         {
+            var vitals = col.GetComponentInParent<EnemyVitals>();
+            if (vitals != null && vitals.IsDead) continue;
+
             float d = Vector3.Distance(transform.position, col.transform.position);
             if (d < bestDist)
             {

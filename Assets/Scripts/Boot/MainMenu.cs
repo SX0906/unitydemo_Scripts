@@ -10,9 +10,11 @@ public class MainMenu : MonoBehaviour
 
     private void Start()
     {
-        // 同步静态状态到 UI
-        if (testModeToggle != null)
-            testModeToggle.isOn = EnemyFSM.TestModeEnabled;
+        if (testModeToggle == null) return;
+
+        bool saved = PlayerPrefs.GetInt("TestMode", 0) == 1;
+        EnemyFSM.TestModeEnabled = saved;
+        testModeToggle.SetIsOnWithoutNotify(saved);
     }
 
     public void StartGame()
