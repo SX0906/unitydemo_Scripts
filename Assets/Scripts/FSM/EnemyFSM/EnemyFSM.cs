@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class EnemyFSM : MonoBehaviour
@@ -79,7 +79,7 @@ public class EnemyFSM : MonoBehaviour
         skillManager = GetComponent<EnemySkillManager>();
         enemyWeaponHitDetector = GetComponentInChildren<EnemyWeaponHitDetector>();
         fsm = new EnemyFSMControl();
-        testMode = TestModeEnabled;
+        testMode = PlayerPrefs.GetInt("TestMode", 0) == 1; TestModeEnabled = testMode;
 
         // 顿帧管理器宿主注册
         HitStopManager.EnsureHost(this);

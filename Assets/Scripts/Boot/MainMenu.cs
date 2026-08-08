@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
@@ -25,5 +25,7 @@ public class MainMenu : MonoBehaviour
     public void OnTestModeToggled(bool value)
     {
         EnemyFSM.TestModeEnabled = value;
+        PlayerPrefs.SetInt("TestMode", value ? 1 : 0);
+        PlayerPrefs.Save();
     }
 }
