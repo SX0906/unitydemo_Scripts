@@ -43,7 +43,7 @@ public class EnemyFSM : MonoBehaviour
     //public float hitStopTimeScale = 0.1f;
     //public float hitStopDuration = 0.2f;
     public int hitStopFrameCount = 8;
-    private float memoryDuration = 2f;
+    private float memoryDuration = 3f;
     private float memoryTimer;
 
     public bool IsGrounded => CheckGrounded();

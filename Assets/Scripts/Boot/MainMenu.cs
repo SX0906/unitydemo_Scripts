@@ -12,9 +12,10 @@ public class MainMenu : MonoBehaviour
     {
         if (testModeToggle == null) return;
 
-        bool saved = PlayerPrefs.GetInt("TestMode", 0) == 1;
-        EnemyFSM.TestModeEnabled = saved;
-        testModeToggle.SetIsOnWithoutNotify(saved);
+        PlayerPrefs.SetInt("TestMode", 0);
+        PlayerPrefs.Save();
+        EnemyFSM.TestModeEnabled = false;
+        testModeToggle.SetIsOnWithoutNotify(false);
     }
 
     public void StartGame()

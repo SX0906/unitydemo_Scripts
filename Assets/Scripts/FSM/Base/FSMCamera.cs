@@ -72,6 +72,25 @@ public class FSMCamera : MonoBehaviour
     [Tooltip("距离大于或等于该值时使用远距离参数")]
     public float maxDistanceThreshold = 15f;
 
+    [Header("锁定 - 高度差自适应")]
+    [Tooltip("超过该高度差开始自动拉远/压低镜头")]
+    public float heightDiffThreshold = 2f;
+
+    [Tooltip("达到该高度差后效果完全生效")]
+    public float heightDiffMax = 8f;
+
+    [Tooltip("高度差最大时额外拉远的 CameraDistance")]
+    public float heightExtraDistance = 4f;
+
+    [Tooltip("高度差最大时镜头至少下压到的俯角（度）")]
+    public float heightLookDownPitch = 15f;
+
+    [Tooltip("高度差自适应拉远的上限")]
+    public float maxAutoCameraDistance = 12f;
+
+    [Tooltip("高度差自适应过渡平滑速度")]
+    public float heightSmoothSpeed = 4f;
+
     [Header("平滑速度")]
     public float distanceSmoothSpeed = 6f;
     public float fovSmoothSpeed = 6f;
@@ -97,6 +116,7 @@ public class FSMCamera : MonoBehaviour
     private float yaw;
     private float pitch;
     private float currentLift;
+    private float currentHeightFactor;
     private float currentFOV;
     private float currentCameraDistance;
     private Vector3 currentShoulderOffset;
@@ -250,6 +270,16 @@ public class FSMCamera : MonoBehaviour
 
         float distance = toEnemy.magnitude;
 
+        float heightDiff = Mathf.Abs(enemyPos.y - playerPos.y);
+        float heightRange = Mathf.Max(heightDiffMax - heightDiffThreshold, 0.001f);
+        float targetHeightFactor = heightDiff <= heightDiffThreshold
+            ? 0f
+            : Mathf.Clamp01((heightDiff - heightDiffThreshold) / heightRange);
+        currentHeightFactor = Mathf.Lerp(
+            currentHeightFactor,
+            targetHeightFactor,
+            heightSmoothSpeed * Time.deltaTime);
+
         // Look 点：中点 + 基础高度 + 距离额外抬升
         Vector3 midPoint =
             (playerPos + enemyPos) * 0.5f +
@@ -293,6 +323,10 @@ public class FSMCamera : MonoBehaviour
                 Mathf.Clamp(offsetDir.y, -1f, 1f)) *
             Mathf.Rad2Deg;
 
+        float heightLookDownBoost =
+            currentHeightFactor * heightLookDownPitch;
+
+        targetPitch = Mathf.Max(targetPitch, heightLookDownBoost);
         targetPitch = Mathf.Clamp(
             targetPitch,
             bottomClamp,
@@ -339,10 +373,13 @@ public class FSMCamera : MonoBehaviour
             targetZoomDistance -
             _defaultCameraDistance;
 
+        float heightDistanceBoost =
+            currentHeightFactor * heightExtraDistance;
+
         float targetDist = Mathf.Clamp(
-            automaticDistance + playerZoomOffset,
+            automaticDistance + playerZoomOffset + heightDistanceBoost,
             minZoomDistance,
-            maxZoomDistance);
+            Mathf.Max(maxZoomDistance, maxAutoCameraDistance));
 
         currentCameraDistance = Mathf.Lerp(
             currentCameraDistance,
