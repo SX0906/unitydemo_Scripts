@@ -1,0 +1,92 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// 敌人战斗协调器：负责敌人间警报共享和攻击名额控制。
+/// 无需挂到场景，由 EnemyFSM 在启用/销毁时注册或注销。
+/// </summary>
+public static class EnemyCombatCoordinator
+{
+    private static readonly HashSet<EnemyFSM> Registered = new();
+    private static readonly HashSet<EnemyFSM> AttackHolders = new();
+
+    /// <summary>最多同时攻击的敌人数量</summary>
+    public static int MaxAttackers = 2;
+
+    /// <summary>最后一次直接看到玩家后，共享警报保留的秒数</summary>
+    public static float SharedAlertDuration = 5f;
+
+    private static Transform sharedTarget;
+    private static Vector3 sharedLastKnownPos;
+    private static float sharedAlertEndTime;
+
+    public static bool HasSharedTarget =>
+        sharedTarget != null && Time.time < sharedAlertEndTime;
+
+    public static bool AttackSlotsFull => AttackHolders.Count >= MaxAttackers;
+
+    public static void Register(EnemyFSM enemy)
+    {
+        if (enemy == null) return;
+        Registered.Add(enemy);
+    }
+
+    public static void Unregister(EnemyFSM enemy)
+    {
+        if (enemy == null) return;
+        Registered.Remove(enemy);
+        ReleaseAttackSlot(enemy);
+    }
+
+    public static bool TryAcquireAttackSlot(EnemyFSM enemy)
+    {
+        if (enemy == null) return false;
+        if (AttackHolders.Contains(enemy)) return true;
+        if (AttackHolders.Count >= MaxAttackers) return false;
+        AttackHolders.Add(enemy);
+        return true;
+    }
+
+    public static void ReleaseAttackSlot(EnemyFSM enemy)
+    {
+        if (enemy == null) return;
+        AttackHolders.Remove(enemy);
+    }
+
+    /// <summary>
+    /// 有敌人首次发现玩家时调用：记录共享目标，并通知范围内尚未发现玩家的敌人。
+    /// </summary>
+    public static void ReportPlayerSpotted(
+        EnemyFSM source, Transform player, Vector3 position, float alertRadius)
+    {
+        if (source == null || player == null) return;
+
+        RefreshSharedTarget(player, position);
+
+        Vector3 sourcePos = source.transform.position;
+        foreach (EnemyFSM enemy in Registered)
+        {
+            if (enemy == null || enemy == source) continue;
+            if (enemy.hasTarget) continue;
+            if (Vector3.Distance(sourcePos, enemy.transform.position) > alertRadius) continue;
+            enemy.ReceiveSharedAlert(player, position);
+        }
+    }
+
+    /// <summary>玩家持续被看到时，每帧刷新共享位置与过期时间</summary>
+    public static void RefreshSharedTarget(Transform player, Vector3 position)
+    {
+        if (player == null) return;
+        sharedTarget = player;
+        sharedLastKnownPos = position;
+        sharedAlertEndTime = Time.time + SharedAlertDuration;
+    }
+
+    /// <summary>获取仍有效的共享警报（队内还有人知道玩家位置）</summary>
+    public static bool TryGetSharedAlert(out Transform target, out Vector3 position)
+    {
+        target = sharedTarget;
+        position = sharedLastKnownPos;
+        return HasSharedTarget;
+    }
+}

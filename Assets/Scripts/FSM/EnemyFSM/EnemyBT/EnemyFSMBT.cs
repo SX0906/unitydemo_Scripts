@@ -225,6 +225,9 @@ public class EnemyFSMBT
                 enemyFSM.transform, enemyFSM.targetPlayer);
             if (skill == null) return BTNodeState.Failure;
 
+            if (!EnemyCombatCoordinator.TryAcquireAttackSlot(enemyFSM))
+                return BTNodeState.Failure;
+
             skillMgr.StartCast(skill, enemyFSM.targetPlayer);
             enemyFSM.GetAttackState()?.SetAttackerAndSkill(
                 enemyFSM.targetPlayer, skill);
@@ -248,12 +251,15 @@ public class EnemyFSMBT
 
         chaseSequence.AddChild(new BTActionNode(() =>
         {
-            if (enemyFSM.hasTarget)
-            {
-                enemyFSM.BT_SetDesiredState(EnemyStateType.MOVE);
-                return BTNodeState.Success;
-            }
-            return BTNodeState.Failure;
+            if (!enemyFSM.hasTarget)
+                return BTNodeState.Failure;
+
+            // 攻击名额已满时，其余敌人进入锁定走位围观，不再冲上去打
+            enemyFSM.BT_SetDesiredState(
+                EnemyCombatCoordinator.AttackSlotsFull
+                    ? EnemyStateType.LOCK_MOVE
+                    : EnemyStateType.MOVE);
+            return BTNodeState.Success;
         }));
 
         // ===== ★ 锁定移动序列：有目标 + 无任何可用技能 → LOCK_MOVE =====

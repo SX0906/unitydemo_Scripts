@@ -39,12 +39,17 @@ public class EnemyFSM : MonoBehaviour
     [HideInInspector] public Transform targetPlayer;
     [HideInInspector] public Vector3 lastKnownPlayerPos;
 
+    [Header("协战通信")]
+    [Tooltip("发现玩家后，通知此半径内的其它敌人一起追击")]
+    public float alertRadius = 10f;
+
     [Header("顿帧设置")]
     //public float hitStopTimeScale = 0.1f;
     //public float hitStopDuration = 0.2f;
     public int hitStopFrameCount = 8;
     private float memoryDuration = 3f;
     private float memoryTimer;
+    private bool wasDetecting;
 
     public bool IsGrounded => CheckGrounded();
     public LayerMask PlayerLayer => playerLayer;   // 供EnemyAttackState范围检测用
@@ -107,6 +112,16 @@ public class EnemyFSM : MonoBehaviour
         var vitals = GetComponent<EnemyVitals>();
         if (vitals != null)
             vitals.OnPostureFull += () => fsm.SetState(EnemyStateType.BLOCKBREAK);
+    }
+
+    private void OnEnable()
+    {
+        EnemyCombatCoordinator.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        EnemyCombatCoordinator.Unregister(this);
     }
 
     public void DirectSetState(EnemyStateType state)
@@ -233,10 +248,17 @@ public class EnemyFSM : MonoBehaviour
 
         if (detectedThisFrame)
         {
+            bool firstSight = !wasDetecting;
             targetPlayer = detectedHit.transform;
             lastKnownPlayerPos = detectedHit.transform.position;
             memoryTimer = memoryDuration;
             hasTarget = true;
+
+            // 首次看到玩家：广播警报；后续帧只刷新共享位置
+            if (firstSight)
+                EnemyCombatCoordinator.ReportPlayerSpotted(this, targetPlayer, lastKnownPlayerPos, alertRadius);
+            else
+                EnemyCombatCoordinator.RefreshSharedTarget(targetPlayer, lastKnownPlayerPos);
         }
         else if (hasTarget && targetPlayer != null)
         {
@@ -246,6 +268,14 @@ public class EnemyFSM : MonoBehaviour
                 memoryTimer -= Time.deltaTime;
                 lastKnownPlayerPos = targetPlayer.position;
             }
+            else if (EnemyCombatCoordinator.TryGetSharedAlert(out Transform sharedPlayer, out Vector3 sharedPos))
+            {
+                // 自己的记忆结束但队内还有人知道玩家位置时，继续共享追击
+                targetPlayer = sharedPlayer;
+                lastKnownPlayerPos = sharedPos;
+                memoryTimer = memoryDuration;
+                hasTarget = true;
+            }
             else
             {
                 hasTarget = false;
@@ -253,6 +283,20 @@ public class EnemyFSM : MonoBehaviour
                 memoryTimer = 0;
             }
         }
+        wasDetecting = detectedThisFrame;
+    }
+
+    /// <summary>
+    /// 接收其它敌人广播的共享警报，获得玩家位置并开始追击。
+    /// </summary>
+    public void ReceiveSharedAlert(Transform player, Vector3 position)
+    {
+        if (player == null || hasTarget) return;
+
+        targetPlayer = player;
+        lastKnownPlayerPos = position;
+        memoryTimer = Mathf.Max(memoryTimer, memoryDuration);
+        hasTarget = true;
     }
 
     public void OnAttackComboCheck()

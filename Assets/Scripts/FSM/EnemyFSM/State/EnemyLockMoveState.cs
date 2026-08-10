@@ -15,13 +15,13 @@ public class EnemyLockMoveState : EnemyStateBase
     private EnemyFSM enemyFSM;
 
     private LockMovePhase phase;
-
     private bool reactIsRetreat;
     private float dodgeDuration = 0.8f;
     private float reactTimer;
     private Transform attacker;
 
     private float retreatTargetDistance = 4f;
+    private bool wasTooClose;
 
     private float lockRotateSpeed = 12f;
     private float minDistance = 5f;
@@ -47,11 +47,16 @@ public class EnemyLockMoveState : EnemyStateBase
         this.enemyFSM = enemyFSM;
     }
 
-
     public override void OnEnter()
     {
-        reactIsRetreat = Random.value < 0.6f;
+        wasTooClose = false;
+        EnterLockMovePhase();
+    }
+
+    private void StartReact()
+    {
         phase = LockMovePhase.React;
+        reactIsRetreat = Random.value < 0.6f;
 
         if (reactIsRetreat)
         {
@@ -136,9 +141,7 @@ public class EnemyLockMoveState : EnemyStateBase
         FaceTarget(toTarget);
 
         if (distance >= retreatTargetDistance)
-        {
             EnterLockMovePhase();
-        }
     }
 
     private void UpdateDodge(Transform target)
@@ -153,9 +156,7 @@ public class EnemyLockMoveState : EnemyStateBase
 
         reactTimer -= Time.deltaTime;
         if (reactTimer <= 0f)
-        {
             EnterLockMovePhase();
-        }
     }
 
     private void UpdateLockMove(Transform target)
@@ -171,12 +172,25 @@ public class EnemyLockMoveState : EnemyStateBase
 
         FaceTarget(toTarget);
 
+        bool tooClose = distance < minDistance - minDistanceBuffer;
+        if (tooClose && !wasTooClose)
+        {
+            wasTooClose = true;
+            StartReact();
+            return;
+        }
+        wasTooClose = tooClose;
+
         Vector3 targetWorldMoveDir;
-        if (distance < minDistance - minDistanceBuffer)
+        if (tooClose)
         {
             targetWorldMoveDir = -dirToTarget;
         }
         else if (distance > minDistance + minDistanceBuffer)
+        {
+            targetWorldMoveDir = dirToTarget;
+        }
+        else
         {
             Vector3 right = Vector3.Cross(Vector3.up, dirToTarget).normalized;
             strafeDirTimer += Time.deltaTime;
@@ -186,10 +200,6 @@ public class EnemyLockMoveState : EnemyStateBase
                 strafeSign = Random.value < 0.5f ? 1f : -1f;
             }
             targetWorldMoveDir = right * strafeSign;
-        }
-        else
-        {
-            targetWorldMoveDir = smoothWorldMoveDir.normalized;
         }
 
         smoothWorldMoveDir = Vector3.Lerp(smoothWorldMoveDir, targetWorldMoveDir, moveDirSmoothSpeed * Time.deltaTime);

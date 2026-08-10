@@ -80,6 +80,7 @@ public class EnemyAttackState : EnemyStateBase
 
     public override void OnExit()
     {
+        EnemyCombatCoordinator.ReleaseAttackSlot(enemyFSM);
         enemyFSM.OnEnemyHitWindowClose();
         // 异常中断（如受击）也确保冷却写入
         if (currentSkill != null)
