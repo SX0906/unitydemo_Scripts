@@ -41,7 +41,7 @@ public class EnemyFSM : MonoBehaviour
 
     [Header("协战通信")]
     [Tooltip("发现玩家后，通知此半径内的其它敌人一起追击")]
-    public float alertRadius = 10f;
+    public float alertRadius = 16f;
 
     [Header("顿帧设置")]
     //public float hitStopTimeScale = 0.1f;
@@ -50,6 +50,7 @@ public class EnemyFSM : MonoBehaviour
     private float memoryDuration = 3f;
     private float memoryTimer;
     private bool wasDetecting;
+    private float attackDeclineUntil;
 
     public bool IsGrounded => CheckGrounded();
     public LayerMask PlayerLayer => playerLayer;   // 供EnemyAttackState范围检测用
@@ -138,6 +139,13 @@ public class EnemyFSM : MonoBehaviour
     {
         if (behaviorTree != null)
             behaviorTree.blackboard.desiredState = state;
+    }
+
+    public bool CanAttemptAttack => Time.time >= attackDeclineUntil;
+
+    public void MarkAttackDeclined(float duration = 1f)
+    {
+        attackDeclineUntil = Time.time + duration;
     }
 
     private void Update()

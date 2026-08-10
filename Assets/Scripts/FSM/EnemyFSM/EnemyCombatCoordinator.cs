@@ -11,19 +11,30 @@ public static class EnemyCombatCoordinator
     private static readonly HashSet<EnemyFSM> AttackHolders = new();
 
     /// <summary>最多同时攻击的敌人数量</summary>
-    public static int MaxAttackers = 2;
+    public static int MaxAttackers = 1;
 
     /// <summary>最后一次直接看到玩家后，共享警报保留的秒数</summary>
     public static float SharedAlertDuration = 5f;
 
+    /// <summary>攻击名额释放后，下一个攻击者需要等待的秒数</summary>
+    public static float AttackHandoffDelay = 0.5f;
+
+    /// <summary>上一个技能禁止重复使用的秒数</summary>
+    public static float SkillLockDuration = 1.5f;
+
     private static Transform sharedTarget;
     private static Vector3 sharedLastKnownPos;
     private static float sharedAlertEndTime;
+    private static float attackReadyTime;
+    private static string lastUsedSkillID;
+    private static float skillLockEndTime;
 
     public static bool HasSharedTarget =>
         sharedTarget != null && Time.time < sharedAlertEndTime;
 
     public static bool AttackSlotsFull => AttackHolders.Count >= MaxAttackers;
+
+    public static string LastUsedSkillID => lastUsedSkillID;
 
     public static void Register(EnemyFSM enemy)
     {
@@ -42,6 +53,7 @@ public static class EnemyCombatCoordinator
     {
         if (enemy == null) return false;
         if (AttackHolders.Contains(enemy)) return true;
+        if (Time.time < attackReadyTime) return false;
         if (AttackHolders.Count >= MaxAttackers) return false;
         AttackHolders.Add(enemy);
         return true;
@@ -50,7 +62,42 @@ public static class EnemyCombatCoordinator
     public static void ReleaseAttackSlot(EnemyFSM enemy)
     {
         if (enemy == null) return;
-        AttackHolders.Remove(enemy);
+        if (AttackHolders.Remove(enemy))
+            attackReadyTime = Time.time + AttackHandoffDelay;
+    }
+
+    /// <summary>记录本次使用的技能，短时间内禁止其它敌人重复使用</summary>
+    public static void NotifySkillUsed(string skillID)
+    {
+        if (string.IsNullOrEmpty(skillID)) return;
+        lastUsedSkillID = skillID;
+        skillLockEndTime = Time.time + SkillLockDuration;
+    }
+
+    /// <summary>该技能是否仍在禁止重复使用时间内</summary>
+    public static bool IsSkillRecentlyUsed(string skillID)
+    {
+        return !string.IsNullOrEmpty(skillID)
+            && skillID == lastUsedSkillID
+            && Time.time < skillLockEndTime;
+    }
+
+    /// <summary>镜头外敌人放弃本次攻击时调用，立即让其它敌人可以竞争攻击名额</summary>
+    public static void NotifyAttackDeclined()
+    {
+        attackReadyTime = Time.time;
+    }
+
+    /// <summary>判断敌人是否在玩家主相机视野内</summary>
+    public static bool IsInCamera(Transform target)
+    {
+        Camera cam = Camera.main;
+        if (cam == null || target == null) return true;
+
+        Vector3 viewport = cam.WorldToViewportPoint(target.position + Vector3.up * 1f);
+        return viewport.z > 0f
+            && viewport.x >= 0f && viewport.x <= 1f
+            && viewport.y >= 0f && viewport.y <= 1f;
     }
 
     /// <summary>

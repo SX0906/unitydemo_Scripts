@@ -63,7 +63,7 @@ public class EnemyLockMoveState : EnemyStateBase
             animator.CrossFade("BaseMotion", 0.05f);
             animator.SetFloat("LockOn", 1f);
             animator.SetFloat("Run", 1f);
-            animator.SetFloat("speed", 2f);
+            animator.SetFloat("speed", 1.2f);
             animator.SetFloat("MoveX", 0f);
             animator.SetFloat("MoveY", -1f);
         }
@@ -94,7 +94,7 @@ public class EnemyLockMoveState : EnemyStateBase
         animator.CrossFade("BaseMotion", 0.05f);
         animator.SetFloat("LockOn", 1f);
         animator.SetFloat("Run", 1f);
-        animator.SetFloat("speed", 2f);
+        animator.SetFloat("speed", 1.2f);
         strafeDirTimer = 0f;
         strafeSign = Random.value < 0.5f ? 1f : -1f;
         smoothWorldMoveDir = Vector3.zero;

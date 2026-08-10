@@ -56,7 +56,7 @@ public class TestFSM : MonoBehaviour
     [Tooltip("软锁定目标与玩家高度差超过该值时不生效")]
     public float softLockMaxHeightDiff = 0.8f;
     [Tooltip("攻击结束后多少秒没有新攻击就自动清除软锁定目标")]
-    public float softLockIdleDuration = 2.5f;
+    public float softLockIdleDuration = 1.8f;
 
     [Header("攻击吸附")]
     public float attackSnapDistance = 2.5f;

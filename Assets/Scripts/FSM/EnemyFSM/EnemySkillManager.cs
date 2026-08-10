@@ -26,13 +26,14 @@ public class EnemySkillManager : MonoBehaviour
     /// 从技能池中返回一个"冷却好 + 在距离内 + isAvailable"的技能，随机选。
     /// 返回 null 表示此刻没有能放的技能。
     /// </summary>
-    public EnemySkillData GetAvailableSkill(Transform self, Transform target)
+    public EnemySkillData GetAvailableSkill(Transform self, Transform target, string excludeSkillID = null)
     {
         if (target == null || skillPool == null) return null;
 
         var available = new List<EnemySkillData>();
         foreach (var s in skillPool)
         {
+            if (!string.IsNullOrEmpty(excludeSkillID) && s.skillID == excludeSkillID) continue;
             if (IsSkillReady(s, self, target))
                 available.Add(s);
         }

@@ -7,7 +7,7 @@ public class EnemyMoveState : EnemyStateBase
     private CharacterController controller;
     private EnemyFSM enemyFSM;
 
-    private float moveSpeed = 1.2f;
+    private float moveSpeed = 0.75f;
     private float gravity = -20f;
     private float verticalVelocity;
 

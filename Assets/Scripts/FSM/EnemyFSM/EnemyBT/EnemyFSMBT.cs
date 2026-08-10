@@ -216,6 +216,7 @@ public class EnemyFSMBT
             return skillMgr != null
                 && enemyFSM.hasTarget
                 && enemyFSM.targetPlayer != null
+                && enemyFSM.CanAttemptAttack
                 && skillMgr.HasAvailableSkill(enemyFSM.transform, enemyFSM.targetPlayer);
         }));
 
@@ -225,9 +226,30 @@ public class EnemyFSMBT
                 enemyFSM.transform, enemyFSM.targetPlayer);
             if (skill == null) return BTNodeState.Failure;
 
+            // 避免与上一个攻击者使用同一个技能；全部技能都被锁住时忽略锁
+            if (EnemyCombatCoordinator.IsSkillRecentlyUsed(skill.skillID))
+            {
+                EnemySkillData alternative = skillMgr.GetAvailableSkill(
+                    enemyFSM.transform,
+                    enemyFSM.targetPlayer,
+                    EnemyCombatCoordinator.LastUsedSkillID);
+                if (alternative != null)
+                    skill = alternative;
+            }
+
+            // 镜头外敌人攻击欲望降低一半：50% 概率放弃本次机会
+            if (!EnemyCombatCoordinator.IsInCamera(enemyFSM.transform)
+                && UnityEngine.Random.value < 0.5f)
+            {
+                enemyFSM.MarkAttackDeclined();
+                EnemyCombatCoordinator.NotifyAttackDeclined();
+                return BTNodeState.Failure;
+            }
+
             if (!EnemyCombatCoordinator.TryAcquireAttackSlot(enemyFSM))
                 return BTNodeState.Failure;
 
+            EnemyCombatCoordinator.NotifySkillUsed(skill.skillID);
             skillMgr.StartCast(skill, enemyFSM.targetPlayer);
             enemyFSM.GetAttackState()?.SetAttackerAndSkill(
                 enemyFSM.targetPlayer, skill);
