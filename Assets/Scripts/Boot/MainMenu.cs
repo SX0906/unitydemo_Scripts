@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -21,7 +20,14 @@ public class MainMenu : MonoBehaviour
     public void StartGame()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneNames.Gameplay);
+
+        if (GameManager.Instance == null)
+        {
+            var gmGo = new GameObject("GameManager");
+            gmGo.AddComponent<GameManager>();
+        }
+
+        GameManager.Instance.StartGame();
     }
 
     /// <summary>测试模式 Toggle 的 onValueChanged 回调</summary>
