@@ -46,7 +46,9 @@ public class AttackState : StateBase
     {
         animator.SetTrigger(attackTrigger);
         hasAttackStarted = false;
-        snapTarget = FindSnapTarget();
+        testfsm.RefreshSoftLockTarget();
+        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        testfsm.StartSoftLockCameraAssist();
 
         hasBufferedNextAttack = false;
         comboWindowOpen = false;
@@ -111,6 +113,9 @@ public class AttackState : StateBase
 
     public override void OnExit()
     {
+        testfsm.StopSoftLockCameraAssist();
+        testfsm.ResetSoftLockIdleTimer();
+        testfsm.ForceCloseWeaponHitbox();
         animator.ResetTrigger(attackTrigger);
         snapTarget = null;
         hasBufferedNextAttack = false;

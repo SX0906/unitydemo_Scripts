@@ -28,6 +28,8 @@ public class JumpState : StateBase
 
     public override void OnEnter()
     {
+        testfsm.ForceCloseWeaponHitbox();
+
         if (testfsm.JumpSoftEnter)
         {
             testfsm.VerticalVelocity = 0f;

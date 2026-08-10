@@ -38,7 +38,9 @@ public class BackAttackState : StateBase
 
         animator.Play(BackAttackAnim);
         Debug.Log("进入反击状态");
-        snapTarget = FindSnapTarget();
+        testfsm.RefreshSoftLockTarget();
+        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        testfsm.StartSoftLockCameraAssist();
     }
 
     public override void OnUpdate()
@@ -60,6 +62,9 @@ public class BackAttackState : StateBase
 
     public override void OnExit()
     {
+        testfsm.StopSoftLockCameraAssist();
+        testfsm.ResetSoftLockIdleTimer();
+        testfsm.ForceCloseWeaponHitbox();
         snapTarget = null;
         if (animator != null)
         {

@@ -51,7 +51,9 @@ public class AirAttackState : StateBase
         testfsm.AirAttackEnterY = testfsm.transform.position.y;
         currentAnimStarted = false;
         animator.Play("Combo_Attack_Air_01", 0, 0f);
-        snapTarget = FindSnapTarget();
+        testfsm.RefreshSoftLockTarget();
+        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        testfsm.StartSoftLockCameraAssist();
 
         hasBufferedNextAttack = false;
         comboWindowOpen = false;
@@ -104,6 +106,9 @@ public class AirAttackState : StateBase
 
     public override void OnExit()
     {
+        testfsm.StopSoftLockCameraAssist();
+        testfsm.ResetSoftLockIdleTimer();
+        testfsm.ForceCloseWeaponHitbox();
         testfsm.VerticalVelocity = 0f;
         animator.ResetTrigger(AirAttackTrigger);
         currentAnimStarted = false;

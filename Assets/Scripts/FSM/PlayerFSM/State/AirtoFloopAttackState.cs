@@ -38,6 +38,8 @@ public class AirtoFloopAttackState : StateBase
         currentPhase = Phase.Start;
         hasDealtDamage = false;
         testfsm.VerticalVelocity = 0f;
+        testfsm.RefreshSoftLockTarget();
+        testfsm.StartSoftLockCameraAssist();
         animator.Play(StartAnim, 0, 0f);
     }
 
@@ -120,6 +122,8 @@ public class AirtoFloopAttackState : StateBase
 
     public override void OnExit()
     {
+        testfsm.StopSoftLockCameraAssist();
+        testfsm.ResetSoftLockIdleTimer();
         testfsm.VerticalVelocity = 0f;
         currentPhase = Phase.Start;
         hasDealtDamage = false;

@@ -273,6 +273,15 @@ namespace GameInput
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""ChangeLockON"",
+                    ""type"": ""Button"",
+                    ""id"": ""f73ce8d4-11dd-4acc-ae6a-cb9669269ecb"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -790,6 +799,17 @@ namespace GameInput
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
                     ""action"": ""Zoom"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""fdeeb910-fad6-4775-99e2-7371f53f431a"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""ChangeLockON"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1397,6 +1417,7 @@ namespace GameInput
             m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
             m_Player_Power = m_Player.FindAction("Power", throwIfNotFound: true);
             m_Player_Zoom = m_Player.FindAction("Zoom", throwIfNotFound: true);
+            m_Player_ChangeLockON = m_Player.FindAction("ChangeLockON", throwIfNotFound: true);
             // UI
             m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
             m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1510,6 +1531,7 @@ namespace GameInput
         private readonly InputAction m_Player_Dodge;
         private readonly InputAction m_Player_Power;
         private readonly InputAction m_Player_Zoom;
+        private readonly InputAction m_Player_ChangeLockON;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -1602,6 +1624,10 @@ namespace GameInput
             /// </summary>
             public InputAction @Zoom => m_Wrapper.m_Player_Zoom;
             /// <summary>
+            /// Provides access to the underlying input action "Player/ChangeLockON".
+            /// </summary>
+            public InputAction @ChangeLockON => m_Wrapper.m_Player_ChangeLockON;
+            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -1687,6 +1713,9 @@ namespace GameInput
                 @Zoom.started += instance.OnZoom;
                 @Zoom.performed += instance.OnZoom;
                 @Zoom.canceled += instance.OnZoom;
+                @ChangeLockON.started += instance.OnChangeLockON;
+                @ChangeLockON.performed += instance.OnChangeLockON;
+                @ChangeLockON.canceled += instance.OnChangeLockON;
             }
 
             /// <summary>
@@ -1758,6 +1787,9 @@ namespace GameInput
                 @Zoom.started -= instance.OnZoom;
                 @Zoom.performed -= instance.OnZoom;
                 @Zoom.canceled -= instance.OnZoom;
+                @ChangeLockON.started -= instance.OnChangeLockON;
+                @ChangeLockON.performed -= instance.OnChangeLockON;
+                @ChangeLockON.canceled -= instance.OnChangeLockON;
             }
 
             /// <summary>
@@ -2198,6 +2230,13 @@ namespace GameInput
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnZoom(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "ChangeLockON" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnChangeLockON(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

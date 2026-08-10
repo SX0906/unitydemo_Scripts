@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using GameInput;
 using UnityEngine.Playables;
 
@@ -12,6 +13,10 @@ public class TestFSM : MonoBehaviour
     private PlayerVitals playerVitals;
     private bool _isRunning;
     private bool _isLockOn;
+    private List<Transform> _lockSwitchOrder = new List<Transform>();
+    private int _lockSwitchIndex = -1;
+    private Transform _lockSwitchBest;
+    private float _softLockIdleTimer;
     // 空中蓄力下砸
     private bool isChargingAirToFloor;
     private float airToFloorChargeTime;
@@ -37,12 +42,21 @@ public class TestFSM : MonoBehaviour
     public Transform lookRoot;
     public Transform _lockOnTarget;
 
+    [Header("锁定标记")]
+    public LockOnTargetMarker lockOnMarker;
+
     [Header("Timeline")]
     public PlayableDirector powerDirector;
     public LayerMask targetLayers;
     public float lockOnSearchRadius = 10f;
     public float lockOnActivationRange = 6f;
     public float lockOnMaxRange = 10f;
+
+    [Header("软锁定")]
+    [Tooltip("软锁定目标与玩家高度差超过该值时不生效")]
+    public float softLockMaxHeightDiff = 0.8f;
+    [Tooltip("攻击结束后多少秒没有新攻击就自动清除软锁定目标")]
+    public float softLockIdleDuration = 2.5f;
 
     [Header("攻击吸附")]
     public float attackSnapDistance = 2.5f;
@@ -110,6 +124,12 @@ public class TestFSM : MonoBehaviour
         
         fsm.SetState(StateType.IDlE);
 
+        if (lockOnMarker == null)
+        {
+            var markerGo = new GameObject("LockOnTargetMarker");
+            lockOnMarker = markerGo.AddComponent<LockOnTargetMarker>();
+        }
+
         if (FindFirstObjectByType<PauseMenu>() == null)
         {
             var pauseGo = new GameObject("PauseMenu");
@@ -126,6 +146,12 @@ public class TestFSM : MonoBehaviour
     private void OnDisable()
     {
         playerControl.Player.Disable();
+    }
+
+    private void OnDestroy()
+    {
+        if (lockOnMarker != null)
+            Destroy(lockOnMarker.gameObject);
     }
 
     private void Update()
@@ -185,6 +211,8 @@ public class TestFSM : MonoBehaviour
         }
 
         CheckLockOnRange();
+
+        UpdateSoftLockIdleTimer();
 
         if (playerControl.Player.ComboSet1.WasPressedThisFrame())
         {
@@ -339,7 +367,7 @@ public class TestFSM : MonoBehaviour
             }
             else
             {
-                Transform target = FindNearestEnemy();
+                Transform target = _lockOnTarget != null ? _lockOnTarget : FindNearestEnemy();
                 if (target != null)
                 {
                     float dist = Vector3.Distance(transform.position, target.position);
@@ -357,10 +385,21 @@ public class TestFSM : MonoBehaviour
                             cameraController.isLockOn = true;
                             cameraController.lockOnTarget = target;
                         }
+                        lockOnMarker?.Show(target);
+                        StopSoftLockCameraAssist();
+                        ResetLockSwitchState();
                         fsm.SetState(StateType.LockOn);
                     }
                 }
             }
+        }
+
+        if (playerControl.Player.ChangeLockON.WasPressedThisFrame())
+        {
+            if (_lockOnTarget == null)
+                SelectSoftLockTarget();
+            else
+                SwitchLockOnTarget();
         }
 
         // 跳跃 —— 消耗体力 15
@@ -425,21 +464,35 @@ public class TestFSM : MonoBehaviour
 
     private void CheckLockOnRange()
     {
-        if (!_isLockOn || _lockOnTarget == null) return;
+        if (_lockOnTarget == null) return;
 
         var vitals = _lockOnTarget.GetComponentInParent<EnemyVitals>();
         if (vitals != null && vitals.IsDead)
         {
-            Debug.Log("自动退出锁定：目标已死亡");
-            ExitLockOn();
+            if (_isLockOn)
+            {
+                Debug.Log("自动退出锁定：目标已死亡");
+                ExitLockOn();
+            }
+            else
+            {
+                ClearSoftLockTarget();
+            }
             return;
         }
 
         float dist = Vector3.Distance(transform.position, _lockOnTarget.position);
         if (dist > lockOnMaxRange)
         {
-            Debug.Log($"自动退出锁定：目标距离 {dist:F1}m，超过最大范围 {lockOnMaxRange}m");
-            ExitLockOn();
+            if (_isLockOn)
+            {
+                Debug.Log($"自动退出锁定：目标距离 {dist:F1}m，超过最大范围 {lockOnMaxRange}m");
+                ExitLockOn();
+            }
+            else
+            {
+                ClearSoftLockTarget();
+            }
         }
     }
 
@@ -447,12 +500,15 @@ public class TestFSM : MonoBehaviour
     {
         _isLockOn = false;
         _lockOnTarget = null;
+        lockOnMarker?.Hide();
         animator.SetFloat("LockOn", 0f);
         if (cameraController != null)
         {
             cameraController.isLockOn = false;
             cameraController.lockOnTarget = null;
         }
+        StopSoftLockCameraAssist();
+        ResetLockSwitchState();
         if (fsm.stateType == StateType.LockOn)
             fsm.SetState(StateType.IDlE);
     }
@@ -462,19 +518,272 @@ public class TestFSM : MonoBehaviour
         Collider[] cols = Physics.OverlapSphere(transform.position, lockOnSearchRadius, targetLayers);
         Transform best = null;
         float bestDist = float.MaxValue;
+        float bestHealth = float.MaxValue;
         foreach (var col in cols)
         {
             var vitals = col.GetComponentInParent<EnemyVitals>();
-            if (vitals != null && vitals.IsDead) continue;
+            if (vitals == null || vitals.IsDead) continue;
 
-            float d = Vector3.Distance(transform.position, col.transform.position);
-            if (d < bestDist)
+            float d = Vector3.Distance(transform.position, vitals.transform.position);
+            float hp = vitals.HealthPercent;
+            if (best == null ||
+                d < bestDist ||
+                (Mathf.Approximately(d, bestDist) && hp < bestHealth))
             {
                 bestDist = d;
-                best = col.transform;
+                bestHealth = hp;
+                best = vitals.transform;
             }
         }
         return best;
+    }
+
+    private void ClearSoftLockTarget()
+    {
+        _lockOnTarget = null;
+        lockOnMarker?.Hide();
+        StopSoftLockCameraAssist();
+        ResetLockSwitchState();
+    }
+
+    private void SelectSoftLockTarget()
+    {
+        Transform target = FindBestLockTarget();
+        if (target == null) return;
+
+        ResetLockSwitchState();
+        _lockOnTarget = target;
+        ResetSoftLockIdleTimer();
+        lockOnMarker?.Show(target);
+    }
+
+    public void StartSoftLockCameraAssist()
+    {
+        if (_isLockOn || _lockOnTarget == null || !IsValidSoftLockTarget(_lockOnTarget))
+        {
+            StopSoftLockCameraAssist();
+            return;
+        }
+
+        cameraController?.StartSoftLockAssist(_lockOnTarget);
+    }
+
+    public void StopSoftLockCameraAssist()
+    {
+        cameraController?.StopSoftLockAssist();
+    }
+
+    public void ResetSoftLockIdleTimer()
+    {
+        _softLockIdleTimer = softLockIdleDuration;
+    }
+
+    private void UpdateSoftLockIdleTimer()
+    {
+        if (_isLockOn || _lockOnTarget == null) return;
+
+        _softLockIdleTimer -= Time.deltaTime;
+        if (_softLockIdleTimer <= 0f)
+            ClearSoftLockTarget();
+    }
+
+    private void SwitchLockOnTarget()
+    {
+        List<Transform> ordered = CollectLockTargets();
+        if (!_isLockOn)
+            ordered = FilterLockTargetsByHeight(ordered);
+
+        Camera cam = Camera.main;
+        List<Transform> visible = cam != null
+            ? FilterVisibleLockTargets(ordered, cam)
+            : ordered;
+        if (visible.Count > 0)
+            ordered = visible;
+
+        if (ordered.Count == 0)
+        {
+            Debug.Log("没有其它可切换的锁定目标");
+            return;
+        }
+
+        ordered.Sort((a, b) => CompareLockPriority(a, b));
+
+        bool setChanged = !SameLockSet(_lockSwitchOrder, ordered);
+        if (setChanged)
+        {
+            _lockSwitchOrder = ordered;
+            _lockSwitchIndex = -1;
+            _lockSwitchBest = ordered[0];
+        }
+        else if (_lockSwitchBest != ordered[0])
+        {
+            _lockSwitchBest = ordered[0];
+            _lockSwitchIndex = -1;
+        }
+
+        int count = ordered.Count;
+        int currentIndex = ordered.IndexOf(_lockOnTarget);
+        int nextIndex;
+
+        if (currentIndex < 0 || _lockSwitchIndex == -1)
+        {
+            // 重新锚定：当前不是最优则先切到最优，当前已是最优则切到下一个
+            nextIndex = currentIndex == 0 ? 1 % count : 0;
+        }
+        else
+        {
+            nextIndex = (_lockSwitchIndex + 1) % count;
+        }
+
+        Transform next = ordered[nextIndex];
+        _lockSwitchIndex = nextIndex;
+
+        _lockOnTarget = next;
+        ResetSoftLockIdleTimer();
+        lockOnMarker?.Show(next);
+
+        if (_isLockOn && cameraController != null)
+            cameraController.lockOnTarget = next;
+    }
+
+    private bool SameLockSet(List<Transform> a, List<Transform> b)
+    {
+        if (a.Count != b.Count) return false;
+        foreach (var t in a)
+        {
+            if (!b.Contains(t)) return false;
+        }
+        return true;
+    }
+
+    private void ResetLockSwitchState()
+    {
+        _lockSwitchOrder.Clear();
+        _lockSwitchIndex = -1;
+        _lockSwitchBest = null;
+    }
+
+    private Transform FindBestLockTarget()
+    {
+        List<Transform> all = CollectLockTargets();
+        all = FilterLockTargetsByHeight(all);
+        if (all.Count == 0) return null;
+
+        Camera cam = Camera.main;
+        List<Transform> visible = cam != null
+            ? FilterVisibleLockTargets(all, cam)
+            : all;
+
+        if (visible.Count == 0)
+            visible = all;
+
+        visible.Sort((a, b) => CompareLockPriority(a, b));
+        return visible[0];
+    }
+
+    private List<Transform> CollectLockTargets()
+    {
+        Collider[] cols = Physics.OverlapSphere(transform.position, lockOnSearchRadius, targetLayers);
+        List<Transform> all = new List<Transform>();
+
+        foreach (var col in cols)
+        {
+            var vitals = col.GetComponentInParent<EnemyVitals>();
+            if (vitals == null || vitals.IsDead) continue;
+            if (Vector3.Distance(transform.position, vitals.transform.position) > lockOnMaxRange) continue;
+            if (!all.Contains(vitals.transform))
+                all.Add(vitals.transform);
+        }
+
+        return all;
+    }
+
+    private List<Transform> FilterLockTargetsByHeight(List<Transform> targets)
+    {
+        List<Transform> result = new List<Transform>();
+
+        foreach (var t in targets)
+        {
+            if (Mathf.Abs(t.position.y - transform.position.y) <= softLockMaxHeightDiff)
+                result.Add(t);
+        }
+
+        return result;
+    }
+
+    private List<Transform> FilterVisibleLockTargets(List<Transform> targets, Camera cam)
+    {
+        List<Transform> visible = new List<Transform>();
+
+        foreach (var t in targets)
+        {
+            Vector3 viewport = cam.WorldToViewportPoint(t.position + Vector3.up * 1f);
+            if (viewport.z <= 0f ||
+                viewport.x < 0f || viewport.x > 1f ||
+                viewport.y < 0f || viewport.y > 1f)
+                continue;
+            visible.Add(t);
+        }
+
+        return visible;
+    }
+
+    public bool IsValidLockTarget(Transform target)
+    {
+        if (target == null) return false;
+
+        var vitals = target.GetComponentInParent<EnemyVitals>();
+        if (vitals != null && vitals.IsDead) return false;
+
+        return Vector3.Distance(transform.position, target.position) <= lockOnMaxRange;
+    }
+
+    public bool IsValidSoftLockTarget(Transform target)
+    {
+        if (!IsValidLockTarget(target)) return false;
+        return Mathf.Abs(target.position.y - transform.position.y) <= softLockMaxHeightDiff;
+    }
+
+    public Transform RefreshSoftLockTarget()
+    {
+        if (_isLockOn && _lockOnTarget != null && IsValidLockTarget(_lockOnTarget))
+        {
+            ResetSoftLockIdleTimer();
+            return _lockOnTarget;
+        }
+
+        if (_lockOnTarget != null && IsValidSoftLockTarget(_lockOnTarget))
+        {
+            ResetSoftLockIdleTimer();
+            return _lockOnTarget;
+        }
+
+        Transform best = FindBestLockTarget();
+        _lockOnTarget = best;
+
+        if (best != null)
+        {
+            ResetSoftLockIdleTimer();
+            lockOnMarker?.Show(best);
+        }
+        else
+            lockOnMarker?.Hide();
+
+        return best;
+    }
+
+    private int CompareLockPriority(Transform a, Transform b)
+    {
+        float distA = Vector3.Distance(transform.position, a.position);
+        float distB = Vector3.Distance(transform.position, b.position);
+        if (distA < distB) return -1;
+        if (distB < distA) return 1;
+
+        var vitalsA = a.GetComponentInParent<EnemyVitals>();
+        var vitalsB = b.GetComponentInParent<EnemyVitals>();
+        float hpA = vitalsA != null ? vitalsA.HealthPercent : 1f;
+        float hpB = vitalsB != null ? vitalsB.HealthPercent : 1f;
+        return hpA.CompareTo(hpB);
     }
 
     private void FollowGroundOnSlope()
@@ -669,6 +978,12 @@ public class TestFSM : MonoBehaviour
         {
             airAttackState.OnComboWindowClose();
         }
+    }
+
+    /// <summary>任何中断攻击的路径都能安全地立刻关闭武器碰撞盒</summary>
+    public void ForceCloseWeaponHitbox()
+    {
+        weaponHitDetector?.OnHitWindowClose();
     }
 
     // === Timeline Signal 调用：Power 技能的每次范围伤害 ===

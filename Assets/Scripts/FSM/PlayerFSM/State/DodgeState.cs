@@ -22,6 +22,8 @@ public class DodgeState : StateBase
 
     public override void OnEnter()
     {
+        testfsm.ForceCloseWeaponHitbox();
+
         if (playerVitals != null)                    
             playerVitals.isInvincible = true;
 

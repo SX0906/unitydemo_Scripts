@@ -33,6 +33,14 @@ public class FSMCamera : MonoBehaviour
     public Transform lockOnTarget;
     public float lockRotateSpeed = 6f;
 
+    [Header("软锁定镜头辅助")]
+    private Transform softLockAssistTarget;
+    [Tooltip("软锁定镜头转向速度")]
+    public float softLockRotateSpeed = 4f;
+    [Range(0f, 0.25f)]
+    [Tooltip("目标进入视口多少范围后停止辅助")]
+    public float softLockViewMargin = 0.3f;
+
     [Header("锁定 - Look 点计算")]
     [Tooltip("中点上方基础抬升高度（米）")]
     public float baseLookHeight = 1f;
@@ -202,6 +210,8 @@ public class FSMCamera : MonoBehaviour
         // 1. 更新 LookRoot 旋转和镜头参数
         if (isLockOn && lockOnTarget)
             UpdateCombatLook();
+        else if (softLockAssistTarget != null)
+            UpdateSoftLockAssist();
         else
             UpdateFreeLook();
 
@@ -216,10 +226,7 @@ public class FSMCamera : MonoBehaviour
 
     private void UpdateFreeLook()
     {
-        currentLift = Mathf.Lerp(
-            currentLift,
-            0f,
-            liftSmoothSpeed * Time.deltaTime);
+        ResetToFreeLookParams();
 
         if (lookInput.sqrMagnitude >= InputThreshold)
         {
@@ -236,6 +243,14 @@ public class FSMCamera : MonoBehaviour
             pitch,
             bottomClamp,
             topClamp);
+    }
+
+    private void ResetToFreeLookParams()
+    {
+        currentLift = Mathf.Lerp(
+            currentLift,
+            0f,
+            liftSmoothSpeed * Time.deltaTime);
 
         // FOV 和肩部偏移恢复默认值
         currentFOV = Mathf.Lerp(
@@ -253,6 +268,65 @@ public class FSMCamera : MonoBehaviour
             currentShoulderOffset,
             _defaultShoulderOffset,
             shoulderSmoothSpeed * Time.deltaTime);
+    }
+
+    // ================= 软锁定镜头辅助 =================
+
+    private void UpdateSoftLockAssist()
+    {
+        Camera cam = Camera.main;
+        if (cam == null || softLockAssistTarget == null || cameraTarget == null)
+        {
+            StopSoftLockAssist();
+            UpdateFreeLook();
+            return;
+        }
+
+        Vector3 targetPos = softLockAssistTarget.position + Vector3.up * baseLookHeight;
+        Vector3 viewport = cam.WorldToViewportPoint(targetPos);
+        float margin = softLockViewMargin;
+
+        bool inView = viewport.z > 0f &&
+            viewport.x > margin && viewport.x < 1f - margin &&
+            viewport.y > margin && viewport.y < 1f - margin;
+
+        if (inView)
+        {
+            StopSoftLockAssist();
+            UpdateFreeLook();
+            return;
+        }
+
+        Vector3 toTarget = targetPos - cameraTarget.position;
+        toTarget.y = 0f;
+
+        if (toTarget.sqrMagnitude < 0.0001f)
+        {
+            UpdateFreeLook();
+            return;
+        }
+
+        float targetYaw = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
+        float flatDist = toTarget.magnitude;
+        float vertical = targetPos.y - cameraTarget.position.y;
+        float targetPitch = Mathf.Atan2(vertical, flatDist) * Mathf.Rad2Deg;
+
+        yaw = Mathf.LerpAngle(yaw, targetYaw, softLockRotateSpeed * Time.deltaTime);
+        pitch = Mathf.Lerp(pitch, targetPitch, softLockRotateSpeed * Time.deltaTime);
+        pitch = Mathf.Clamp(pitch, bottomClamp, topClamp);
+
+        ResetToFreeLookParams();
+    }
+
+    public void StartSoftLockAssist(Transform target)
+    {
+        if (isLockOn || target == null) return;
+        softLockAssistTarget = target;
+    }
+
+    public void StopSoftLockAssist()
+    {
+        softLockAssistTarget = null;
     }
 
     // ================= 锁定视角 =================
