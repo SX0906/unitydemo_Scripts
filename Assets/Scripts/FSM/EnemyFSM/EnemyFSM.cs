@@ -92,7 +92,7 @@ public class EnemyFSM : MonoBehaviour
 
         fsm.AddState(EnemyStateType.IDLE, new EnemyIdleState(animator, fsm, this, controller));
         fsm.AddState(EnemyStateType.MOVE, new EnemyMoveState(animator, fsm, transform, controller, this));
-        fsm.AddState(EnemyStateType.HIT, new EnemyHitState(animator, fsm, transform, audioPlayer));
+        fsm.AddState(EnemyStateType.HIT, new EnemyHitState(animator, fsm, transform, controller, audioPlayer));
         fsm.AddState(EnemyStateType.AIR_HIT, new EnemyAirHitState(animator, fsm, transform, controller, this, audioPlayer));
         fsm.AddState(EnemyStateType.BLOCK, new EnemyBlockState(animator, fsm, this, transform, audioPlayer));
         fsm.AddState(EnemyStateType.DODGE, new EnemyDodgeState(animator, fsm, this, transform, controller));
@@ -339,7 +339,7 @@ public class EnemyFSM : MonoBehaviour
 
     private const float BlockAngle = 45f;
 
-    public bool TakeDamage(string hitDirTag, Vector3 hitDirection, bool isLauncher, Transform attacker, float damage, bool powerAttack = false)
+    public bool TakeDamage(string hitDirTag, Vector3 hitDirection, bool isLauncher, Transform attacker, float damage, bool powerAttack = false, float knockbackForce = 0f, float knockbackDuration = 0f, float knockbackUpForce = 0f)
     {
         if (fsm.stateType == EnemyStateType.DEATH) return false;
 
@@ -534,6 +534,7 @@ public class EnemyFSM : MonoBehaviour
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetHitDirectionTag(hitDirTag);
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
             fsm.GetState<EnemyHitState>(EnemyStateType.HIT).Rehit();
+            fsm.GetState<EnemyHitState>(EnemyStateType.HIT).StartKnockback(hitDirection, knockbackForce, knockbackDuration, knockbackUpForce);
             PlayHitStop(attacker);
             return true;           // ← 扣血了
         }
@@ -541,9 +542,28 @@ public class EnemyFSM : MonoBehaviour
         fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetHitDirectionTag(hitDirTag);
         fsm.GetState<EnemyHitState>(EnemyStateType.HIT).SetAttacker(attacker);
         fsm.SetState(EnemyStateType.HIT);
+        fsm.GetState<EnemyHitState>(EnemyStateType.HIT).StartKnockback(hitDirection, knockbackForce, knockbackDuration, knockbackUpForce);
         PlayHitStop(attacker);
         return true;               // ← 扣血了
     }
+
+    public void ApplyKnockback(Vector3 direction, float force, float duration, float upForce = 0f)
+    {
+        if (fsm.stateType == EnemyStateType.DEATH) return;
+        if (force <= 0f || duration <= 0f) return;
+
+        var hitState = fsm.GetState<EnemyHitState>(EnemyStateType.HIT);
+        hitState.SetHitDirectionTag("F");
+        hitState.SetAttacker(null);
+
+        if (fsm.stateType == EnemyStateType.HIT)
+            hitState.Rehit();
+        else
+            fsm.SetState(EnemyStateType.HIT);
+
+        hitState.StartKnockback(direction, force, duration, upForce);
+    }
+
     public void SetEnemyWeaponDamage(float damage)
     {
         if (enemyWeaponHitDetector != null)

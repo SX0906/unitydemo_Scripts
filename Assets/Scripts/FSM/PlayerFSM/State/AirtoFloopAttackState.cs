@@ -16,6 +16,10 @@ public class AirtoFloopAttackState : StateBase
     private float slamSpeed = 25f;         // Loop阶段向下位移速度
     private float damageRadius = 2f;       // 落地范围伤害半径
     private float damageAmount = 30f;      // 落地伤害值
+    private float knockbackRadius = 4f;    // 击退范围半径（比伤害范围大）
+    private float knockbackForce = 8f;     // 击退初速度
+    private float knockbackDuration = 0.35f; // 击退持续时间
+    private float knockbackUpForce = 3.2f; // 上抛初速度，约0.25米高（v²/2g，g=-20）
 
     private const string StartAnim = "Attack_Air_to_Floor_Start";
     private const string LoopAnim  = "Attack_Air_to_Floor_Loop";
@@ -95,7 +99,8 @@ public class AirtoFloopAttackState : StateBase
         hasDealtDamage = true;
 
         Vector3 center = testfsm.transform.position;
-        Collider[] hits = Physics.OverlapSphere(center, damageRadius, testfsm.targetLayers);
+        Collider[] hits = Physics.OverlapSphere(center,
+            Mathf.Max(damageRadius, knockbackRadius), testfsm.targetLayers);
 
         ActorVitals playerVitals = testfsm.GetComponent<ActorVitals>();
 
@@ -108,7 +113,19 @@ public class AirtoFloopAttackState : StateBase
             dir.y = 0f;
             if (dir.magnitude < 0.01f) dir = testfsm.transform.forward;
 
-            enemy.TakeDamage("F", dir, false, testfsm.transform, damageAmount);
+            bool inDamageRange =
+                Vector3.Distance(center, enemy.transform.position) <= damageRadius;
+
+            if (!inDamageRange)
+            {
+                // 击退圈内、伤害圈外：只触发受击动作和位移，不扣血不给怒气
+                enemy.ApplyKnockback(dir, knockbackForce, knockbackDuration, knockbackUpForce);
+                continue;
+            }
+
+            bool damaged = enemy.TakeDamage("F", dir, false, testfsm.transform,
+                damageAmount, false, knockbackForce, knockbackDuration, knockbackUpForce);
+            if (!damaged) continue;
 
             // 击杀/击中 → 怒气
             EnemyVitals enemyVitals = enemy.GetComponent<EnemyVitals>();
