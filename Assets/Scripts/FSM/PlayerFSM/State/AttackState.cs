@@ -46,8 +46,9 @@ public class AttackState : StateBase
     {
         animator.SetTrigger(attackTrigger);
         hasAttackStarted = false;
-        testfsm.RefreshSoftLockTarget();
-        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
         testfsm.StartSoftLockCameraAssist();
 
         hasBufferedNextAttack = false;
@@ -184,6 +185,10 @@ public class AttackState : StateBase
     {
         if (!hasBufferedNextAttack || !comboWindowOpen || animator == null) return;
         if (!IsInAttackTag()) return;
+
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
 
         animator.SetTrigger(attackTrigger);
         hasBufferedNextAttack = false;

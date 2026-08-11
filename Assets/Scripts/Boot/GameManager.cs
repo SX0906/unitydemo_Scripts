@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour, IGameFlow
     {
         Time.timeScale = 1f;
         HitStopManager_test.Reset();
+        HitStopManager.Reset();
         LoadScene(SceneNames.Gameplay);
     }
 

@@ -51,8 +51,9 @@ public class AirAttackState : StateBase
         testfsm.AirAttackEnterY = testfsm.transform.position.y;
         currentAnimStarted = false;
         animator.Play("Combo_Attack_Air_01", 0, 0f);
-        testfsm.RefreshSoftLockTarget();
-        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
         testfsm.StartSoftLockCameraAssist();
 
         hasBufferedNextAttack = false;
@@ -186,6 +187,10 @@ public class AirAttackState : StateBase
             fsm.SetState(StateType.JUMP);
             return true;
         }
+
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
 
         animator.SetTrigger(AirAttackTrigger);
         currentAnimStarted = false;

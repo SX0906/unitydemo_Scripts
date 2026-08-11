@@ -61,9 +61,11 @@ public static class ActorCollisionEscape
             entry.StartTime = Time.unscaledTime;
         }
 
-        controller.excludeLayers = entry.SavedExcludeLayers | (1 << otherLayer);
+        // 多人夹住时可能同时接触 Player 和 Enemy，统一排除所有角色层
+        controller.excludeLayers = entry.SavedExcludeLayers | (int)ActorMask;
 
         Vector3 away = Vector3.zero;
+        int awayCount = 0;
         Vector3 footPos = GetFootPosition(controller);
         float checkRadius = Mathf.Max(0.06f, controller.radius * 1.2f);
         Collider[] hits = Physics.OverlapSphere(footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
@@ -73,9 +75,16 @@ public static class ActorCollisionEscape
             if (!IsActorCollider(hit)) continue;
             Vector3 dir = controller.transform.position - hit.transform.root.position;
             dir.y = 0f;
-            if (dir.sqrMagnitude > 0.0001f) { away = dir.normalized; break; }
+            if (dir.sqrMagnitude > 0.0001f)
+            {
+                away += dir.normalized;
+                awayCount++;
+            }
         }
+        if (awayCount > 0)
+            away /= awayCount;
         if (away.sqrMagnitude < 0.0001f) away = controller.transform.forward;
+        away.Normalize();
 
         Vector3 motion = away * DefaultEscapeSpeed + (-controller.transform.up) * DefaultFallSpeed;
         controller.Move(motion * Time.deltaTime);

@@ -38,8 +38,9 @@ public class BackAttackState : StateBase
 
         animator.Play(BackAttackAnim);
         Debug.Log("进入反击状态");
-        testfsm.RefreshSoftLockTarget();
-        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
         testfsm.StartSoftLockCameraAssist();
     }
 

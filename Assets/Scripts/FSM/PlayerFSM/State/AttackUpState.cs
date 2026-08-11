@@ -46,8 +46,9 @@ public class AttackUpState : StateBase
         enterStuckFrames = 0;
         string targetState = isAirAttack ? AirStateName : GroundStateName;
         animator.CrossFadeInFixedTime(targetState, 0.05f, 0, 0.2f);
-        testfsm.RefreshSoftLockTarget();
-        snapTarget = testfsm.LockOnTarget != null ? testfsm.LockOnTarget : FindSnapTarget();
+        snapTarget = testfsm.RefreshAttackSoftLockTarget();
+        if (snapTarget == null)
+            snapTarget = FindSnapTarget();
         testfsm.StartSoftLockCameraAssist();
     }
 

@@ -772,6 +772,93 @@ public class TestFSM : MonoBehaviour
         return best;
     }
 
+    /// <summary>
+    /// 攻击软锁定：有移动输入时按镜头相对移动方向重新选目标；否则沿用原软锁定逻辑。
+    /// </summary>
+    public Transform RefreshAttackSoftLockTarget()
+    {
+        if (_isLockOn && _lockOnTarget != null && IsValidLockTarget(_lockOnTarget))
+        {
+            ResetSoftLockIdleTimer();
+            return _lockOnTarget;
+        }
+
+        Vector2 moveInput = GetMoveInput();
+        if (moveInput == Vector2.zero)
+            return RefreshSoftLockTarget();
+
+        Vector3 moveDir = GetCameraRelativeMoveDirection(moveInput);
+        Transform best = FindAttackTargetByMoveDirection(moveDir, attackSnapDistance);
+        if (best == null)
+            return RefreshSoftLockTarget();
+
+        _lockOnTarget = best;
+        ResetSoftLockIdleTimer();
+        lockOnMarker?.Show(best);
+        return best;
+    }
+
+    /// <summary>把移动输入转成以镜头水平方向为基准的世界方向。</summary>
+    public Vector3 GetCameraRelativeMoveDirection(Vector2 input)
+    {
+        Vector3 forward, right;
+        if (lookRoot != null)
+        {
+            forward = lookRoot.forward;
+            right = lookRoot.right;
+        }
+        else
+        {
+            forward = transform.forward;
+            right = transform.right;
+        }
+
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 dir = forward * input.y + right * input.x;
+        if (dir.sqrMagnitude > 1f)
+            dir.Normalize();
+
+        return dir;
+    }
+
+    private Transform FindAttackTargetByMoveDirection(Vector3 moveDir, float maxDistance)
+    {
+        if (moveDir.sqrMagnitude < 0.0001f) return null;
+
+        Collider[] cols = Physics.OverlapSphere(transform.position, maxDistance, targetLayers);
+        Transform best = null;
+        float bestScore = float.MaxValue;
+
+        foreach (var col in cols)
+        {
+            var vitals = col.GetComponentInParent<EnemyVitals>();
+            if (vitals == null || vitals.IsDead) continue;
+            if (Mathf.Abs(vitals.transform.position.y - transform.position.y) > softLockMaxHeightDiff) continue;
+
+            Vector3 toTarget = vitals.transform.position - transform.position;
+            toTarget.y = 0f;
+            float dist = toTarget.magnitude;
+            if (dist > maxDistance || dist < 0.0001f) continue;
+
+            float angle = Vector3.Angle(moveDir, toTarget / dist);
+            if (angle > attackSnapAngle) continue;
+
+            // 距离优先，角度作为次级权重
+            float score = dist + angle * 0.05f;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = vitals.transform;
+            }
+        }
+
+        return best;
+    }
+
     private int CompareLockPriority(Transform a, Transform b)
     {
         float distA = Vector3.Distance(transform.position, a.position);

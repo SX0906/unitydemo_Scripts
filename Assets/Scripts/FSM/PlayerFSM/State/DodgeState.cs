@@ -23,6 +23,7 @@ public class DodgeState : StateBase
     public override void OnEnter()
     {
         testfsm.ForceCloseWeaponHitbox();
+        testfsm.StopSoftLockCameraAssist();
 
         if (playerVitals != null)                    
             playerVitals.isInvincible = true;
@@ -46,11 +47,19 @@ public class DodgeState : StateBase
             if (worldDir.sqrMagnitude > 1f)
                 worldDir.Normalize();
 
-            // 3. 将世界方向转换到角色的本地空间
-            Vector3 localDir = testfsm.transform.InverseTransformDirection(worldDir);
-
-            animator.SetFloat("DodgeX", localDir.x);
-            animator.SetFloat("DodgeY", localDir.z);
+            // 3. 转向闪避方向，避免相对软锁定目标做切线/环绕移动
+            if (worldDir.sqrMagnitude > 0.0001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(worldDir.normalized, Vector3.up);
+                testfsm.transform.rotation = targetRotation;
+                animator.SetFloat("DodgeX", 0f);
+                animator.SetFloat("DodgeY", 1f);
+            }
+            else
+            {
+                animator.SetFloat("DodgeX", input.x);
+                animator.SetFloat("DodgeY", input.y);
+            }
         }
         else
         {

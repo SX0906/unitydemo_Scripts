@@ -15,11 +15,30 @@ public static class HitStopManager
     /// <summary>初始化宿主（由第一个使用者调用）</summary>
     public static void EnsureHost(MonoBehaviour host)
     {
-        if (!_hostSet && host != null)
+        if (host == null) return;
+
+        if (_hostSet && _host != null)
+            return;
+
+        // 旧宿主已销毁时清掉残留状态，再绑定新宿主
+        if (_hostSet)
+            ClearStaleState();
+
+        _host = host;
+        _hostSet = true;
+    }
+
+    /// <summary>场景切换时重置，避免旧场景宿主残留。</summary>
+    public static void Reset()
+    {
+        if (_activeRoutine != null && _host != null)
         {
-            _host = host;
-            _hostSet = true;
+            try { _host.StopCoroutine(_activeRoutine); } catch { }
         }
+
+        ClearStaleState();
+        _host = null;
+        _hostSet = false;
     }
 
     /// <summary>
@@ -87,5 +106,18 @@ public static class HitStopManager
 
         _frozenAnimators.Remove(animator);
         animator.speed = 1f;
+    }
+
+    private static void ClearStaleState()
+    {
+        _activeRoutine = null;
+        _originalTimeScale = 1f;
+        Time.timeScale = 1f;
+
+        foreach (var anim in _frozenAnimators)
+        {
+            if (anim != null) anim.speed = 1f;
+        }
+        _frozenAnimators.Clear();
     }
 }
