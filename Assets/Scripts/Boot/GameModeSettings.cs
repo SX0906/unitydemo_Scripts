@@ -12,6 +12,28 @@ public static class GameModeSettings
 
     public static int CurrentMode => PlayerPrefs.GetInt(PlayerPrefsKey, Mode1V4);
 
+    /// <summary>玩家造成伤害的倍率，1V1 为基准 1.0。</summary>
+    public static float PlayerDamageMultiplier
+    {
+        get
+        {
+            if (CurrentMode == Mode1V2) return 1.2f;
+            if (CurrentMode == Mode1V4) return 1.5f;
+            return 1f;
+        }
+    }
+
+    /// <summary>敌人造成伤害的倍率，1V1 为基准 1.0。</summary>
+    public static float EnemyDamageMultiplier
+    {
+        get
+        {
+            if (CurrentMode == Mode1V2) return 0.8f;
+            if (CurrentMode == Mode1V4) return 0.6f;
+            return 1f;
+        }
+    }
+
     public static bool Is1V1 => CurrentMode == Mode1V1;
     public static bool Is1V2 => CurrentMode == Mode1V2;
     public static bool Is1V4 => CurrentMode == Mode1V4;

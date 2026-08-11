@@ -343,6 +343,9 @@ public class EnemyFSM : MonoBehaviour
     {
         if (fsm.stateType == EnemyStateType.DEATH) return false;
 
+        // 按模式调整玩家对敌人的伤害
+        damage *= GameModeSettings.PlayerDamageMultiplier;
+
         // 愤怒状态下受到伤害 +20%
         var vitals = GetComponent<EnemyVitals>();
         if (vitals != null && vitals.RagePercent >= 1f)

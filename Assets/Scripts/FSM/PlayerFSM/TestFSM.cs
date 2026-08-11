@@ -842,6 +842,9 @@ public class TestFSM : MonoBehaviour
     {
         if (playerVitals == null || playerVitals.IsDead) return;
 
+        // 按模式调整敌人对玩家的伤害
+        damage *= GameModeSettings.EnemyDamageMultiplier;
+
         // 闪避无敌时 → 触发慢动作 + 不吃伤害 + 获得反击机会
         if (playerVitals.isInvincible && fsm.stateType == StateType.DODGE)
         {
