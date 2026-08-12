@@ -11,13 +11,13 @@ public static class EnemyCombatCoordinator
     private static readonly HashSet<EnemyFSM> AttackHolders = new();
 
     /// <summary>最多同时攻击的敌人数量</summary>
-    public static int MaxAttackers = 2;
+    public static int MaxAttackers = 1;
 
     /// <summary>最后一次直接看到玩家后，共享警报保留的秒数</summary>
     public static float SharedAlertDuration = 5f;
 
     /// <summary>攻击名额释放后，下一个攻击者需要等待的秒数</summary>
-    public static float AttackHandoffDelay = 0.5f;
+    public static float AttackHandoffDelay = 0.3f;
 
     /// <summary>两个攻击者开始攻击之间的最小间隔秒数</summary>
     public static float AttackStartStagger = 0.2f;
