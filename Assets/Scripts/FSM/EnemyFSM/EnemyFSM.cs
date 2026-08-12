@@ -399,11 +399,13 @@ public class EnemyFSM : MonoBehaviour
             {
                 _blockCount = 0;
                 fsm.GetState<EnemyHitState>(EnemyStateType.HIT).Rehit();
+                fsm.GetState<EnemyHitState>(EnemyStateType.HIT).StartKnockback(hitDirection, knockbackForce, knockbackDuration, knockbackUpForce);
                 PlayHitStop(attacker);
                 return true;   // ← 扣血了
             }
             _blockCount = 0;
             fsm.SetState(EnemyStateType.HIT);
+            fsm.GetState<EnemyHitState>(EnemyStateType.HIT).StartKnockback(hitDirection, knockbackForce, knockbackDuration, knockbackUpForce);
             PlayHitStop(attacker);
             return true;       // ← 扣血了
         }

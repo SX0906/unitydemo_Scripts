@@ -17,8 +17,8 @@ public class AirtoFloopAttackState : StateBase
     private float damageRadius = 2f;       // 落地范围伤害半径
     private float damageAmount = 30f;      // 落地伤害值
     private float knockbackRadius = 4f;    // 击退范围半径（比伤害范围大）
-    private float knockbackForce = 8f;     // 击退初速度
-    private float knockbackDuration = 0.35f; // 击退持续时间
+    private float knockbackForce = 11.8f;     // 击退初速度
+    private float knockbackDuration = 0.45f; // 击退持续时间
     private float knockbackUpForce = 3.2f; // 上抛初速度，约0.25米高（v²/2g，g=-20）
 
     private const string StartAnim = "Attack_Air_to_Floor_Start";
@@ -124,7 +124,7 @@ public class AirtoFloopAttackState : StateBase
             }
 
             bool damaged = enemy.TakeDamage("F", dir, false, testfsm.transform,
-                damageAmount, false, knockbackForce, knockbackDuration, knockbackUpForce);
+                damageAmount, true, knockbackForce, knockbackDuration, knockbackUpForce);
             if (!damaged) continue;
 
             // 击杀/击中 → 怒气
