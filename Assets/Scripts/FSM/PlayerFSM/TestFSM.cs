@@ -246,8 +246,11 @@ public class TestFSM : MonoBehaviour
         }
 
         // === Attack输入处理 ===
-        if (fsm.stateType != StateType.JUMP && fsm.stateType != StateType.ATTACK_UP && fsm.stateType != StateType.AIR_ATTACK
-            &&fsm.stateType!= StateType.AIRTOFLOORATTACK && fsm.stateType != StateType.BACKATTACK)
+        bool canStartAttackFromNeutral =
+            fsm.stateType == StateType.IDlE
+            || fsm.stateType == StateType.MOVE
+            || fsm.stateType == StateType.LockOn;
+        if (canStartAttackFromNeutral)
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
@@ -279,7 +282,13 @@ public class TestFSM : MonoBehaviour
         }
 
         // 空中攻击蓄力检测 —— 长按1.5秒触发AirtoFloorAttack，松开则普通AirAttack
-        if (!IsGrounded || fsm.stateType == StateType.JUMP || fsm.stateType == StateType.ATTACK_UP || fsm.stateType == StateType.AIR_ATTACK)
+        bool canHandleAirAttackInput =
+            (!IsGrounded || fsm.stateType == StateType.JUMP
+             || fsm.stateType == StateType.ATTACK_UP || fsm.stateType == StateType.AIR_ATTACK)
+            && fsm.stateType != StateType.DODGE
+            && fsm.stateType != StateType.HIT
+            && fsm.stateType != StateType.POWER;
+        if (canHandleAirAttackInput)
         {
             if (playerControl.Player.Attack.WasPressedThisFrame())
             {
@@ -953,6 +962,18 @@ public class TestFSM : MonoBehaviour
         {
             playerVitals.TakeDamage(damage);
             
+            if (playerVitals.IsDead)
+            {
+                fsm.SetState(StateType.DEATH);
+            }
+            return;
+        }
+
+        // 升龙霸体：可正常扣血，但不打断升龙、不进入受击状态
+        if (fsm.stateType == StateType.ATTACK_UP)
+        {
+            playerVitals.TakeDamage(damage);
+
             if (playerVitals.IsDead)
             {
                 fsm.SetState(StateType.DEATH);

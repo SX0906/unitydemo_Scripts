@@ -24,9 +24,10 @@ public static class ActorCollisionEscape
         if (controller == null || !controller.enabled) return false;
 
         Vector3 footPos = GetFootPosition(controller);
+        Vector3 headPos = GetHeadPosition(controller);
         float checkRadius = Mathf.Max(0.06f, controller.radius * 1.2f);
 
-        Collider[] hits = Physics.OverlapSphere(footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
+        Collider[] hits = Physics.OverlapCapsule(headPos, footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
         foreach (Collider hit in hits)
         {
             if (hit == null) continue;
@@ -67,8 +68,9 @@ public static class ActorCollisionEscape
         Vector3 away = Vector3.zero;
         int awayCount = 0;
         Vector3 footPos = GetFootPosition(controller);
+        Vector3 headPos = GetHeadPosition(controller);
         float checkRadius = Mathf.Max(0.06f, controller.radius * 1.2f);
-        Collider[] hits = Physics.OverlapSphere(footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
+        Collider[] hits = Physics.OverlapCapsule(headPos, footPos, checkRadius, ActorMask, QueryTriggerInteraction.Ignore);
         foreach (Collider hit in hits)
         {
             if (hit == null || hit.transform.root == controller.transform.root) continue;
@@ -115,6 +117,13 @@ public static class ActorCollisionEscape
         float halfHeight = controller.height * 0.5f;
         float footOffset = halfHeight;
         return center - controller.transform.up * footOffset;
+    }
+
+    private static Vector3 GetHeadPosition(CharacterController controller)
+    {
+        Vector3 center = controller.transform.TransformPoint(controller.center);
+        float halfHeight = controller.height * 0.5f;
+        return center + controller.transform.up * halfHeight;
     }
 
     private static bool IsActorCollider(Collider collider)
