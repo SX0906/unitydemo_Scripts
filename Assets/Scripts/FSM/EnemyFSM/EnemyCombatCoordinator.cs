@@ -11,7 +11,7 @@ public static class EnemyCombatCoordinator
     private static readonly HashSet<EnemyFSM> AttackHolders = new();
 
     /// <summary>最多同时攻击的敌人数量</summary>
-    public static int MaxAttackers = 1;
+    public static int MaxAttackers = 2;
 
     /// <summary>最后一次直接看到玩家后，共享警报保留的秒数</summary>
     public static float SharedAlertDuration = 5f;
@@ -19,15 +19,20 @@ public static class EnemyCombatCoordinator
     /// <summary>攻击名额释放后，下一个攻击者需要等待的秒数</summary>
     public static float AttackHandoffDelay = 0.5f;
 
+    /// <summary>两个攻击者开始攻击之间的最小间隔秒数</summary>
+    public static float AttackStartStagger = 0.2f;
+
     /// <summary>上一个技能禁止重复使用的秒数</summary>
-    public static float SkillLockDuration = 1.5f;
+    public static float SkillLockDuration = 1f;
 
     private static Transform sharedTarget;
     private static Vector3 sharedLastKnownPos;
     private static float sharedAlertEndTime;
     private static float attackReadyTime;
+    private static float attackStartLockUntil;
     private static string lastUsedSkillID;
     private static float skillLockEndTime;
+    private static readonly Dictionary<EnemyFSM, string> AttackHolderSkills = new();
 
     public static bool HasSharedTarget =>
         sharedTarget != null && Time.time < sharedAlertEndTime;
@@ -49,13 +54,23 @@ public static class EnemyCombatCoordinator
         ReleaseAttackSlot(enemy);
     }
 
-    public static bool TryAcquireAttackSlot(EnemyFSM enemy)
+    public static bool TryAcquireAttackSlot(EnemyFSM enemy, string skillID = null)
     {
         if (enemy == null) return false;
-        if (AttackHolders.Contains(enemy)) return true;
+        if (AttackHolders.Contains(enemy))
+        {
+            if (!string.IsNullOrEmpty(skillID))
+                AttackHolderSkills[enemy] = skillID;
+            return true;
+        }
         if (Time.time < attackReadyTime) return false;
         if (AttackHolders.Count >= MaxAttackers) return false;
+        if (Time.time < attackStartLockUntil) return false;
+        if (!string.IsNullOrEmpty(skillID) && IsSkillInUse(skillID)) return false;
         AttackHolders.Add(enemy);
+        if (!string.IsNullOrEmpty(skillID))
+            AttackHolderSkills[enemy] = skillID;
+        attackStartLockUntil = Time.time + AttackStartStagger;
         return true;
     }
 
@@ -63,7 +78,17 @@ public static class EnemyCombatCoordinator
     {
         if (enemy == null) return;
         if (AttackHolders.Remove(enemy))
+        {
+            AttackHolderSkills.Remove(enemy);
             attackReadyTime = Time.time + AttackHandoffDelay;
+        }
+    }
+
+    /// <summary>该技能当前是否正被某个攻击者占用</summary>
+    public static bool IsSkillInUse(string skillID)
+    {
+        return !string.IsNullOrEmpty(skillID)
+            && AttackHolderSkills.ContainsValue(skillID);
     }
 
     /// <summary>记录本次使用的技能，短时间内禁止其它敌人重复使用</summary>

@@ -226,6 +226,17 @@ public class EnemyFSMBT
                 enemyFSM.transform, enemyFSM.targetPlayer);
             if (skill == null) return BTNodeState.Failure;
 
+            // 避免两个攻击者同时使用同一个技能
+            if (EnemyCombatCoordinator.IsSkillInUse(skill.skillID))
+            {
+                EnemySkillData alternative = skillMgr.GetAvailableSkill(
+                    enemyFSM.transform,
+                    enemyFSM.targetPlayer,
+                    skill.skillID);
+                if (alternative == null) return BTNodeState.Failure;
+                skill = alternative;
+            }
+
             // 避免与上一个攻击者使用同一个技能；全部技能都被锁住时忽略锁
             if (EnemyCombatCoordinator.IsSkillRecentlyUsed(skill.skillID))
             {
@@ -246,7 +257,10 @@ public class EnemyFSMBT
                 return BTNodeState.Failure;
             }
 
-            if (!EnemyCombatCoordinator.TryAcquireAttackSlot(enemyFSM))
+            if (EnemyCombatCoordinator.IsSkillInUse(skill.skillID))
+                return BTNodeState.Failure;
+
+            if (!EnemyCombatCoordinator.TryAcquireAttackSlot(enemyFSM, skill.skillID))
                 return BTNodeState.Failure;
 
             EnemyCombatCoordinator.NotifySkillUsed(skill.skillID);

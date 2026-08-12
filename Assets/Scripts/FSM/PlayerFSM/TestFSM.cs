@@ -59,7 +59,7 @@ public class TestFSM : MonoBehaviour
     public float softLockIdleDuration = 1.8f;
 
     [Header("攻击吸附")]
-    public float attackSnapDistance = 2.5f;
+    public float attackSnapDistance = 8f;
     [Range(0f, 180f)] public float attackSnapAngle = 100f;
     public float attackSnapRotateSpeed = 720f;
 
