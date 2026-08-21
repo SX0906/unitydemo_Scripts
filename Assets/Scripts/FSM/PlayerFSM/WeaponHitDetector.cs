@@ -30,6 +30,12 @@ public class WeaponHitDetector : MonoBehaviour
         _hitEffectSpawner = GetComponent<HitEffectSpawner>();   // ← 新增
     }
 
+    /// <summary>覆盖本次攻击的伤害值，由 TestFSM 按当前攻击状态设置</summary>
+    public void SetDamage(float value)
+    {
+        damage = value;
+    }
+
     public void OnHitWindowOpen(string dirTag)
     {
         _currentHitDirTag = dirTag;

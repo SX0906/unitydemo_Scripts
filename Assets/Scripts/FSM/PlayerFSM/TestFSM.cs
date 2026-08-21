@@ -63,6 +63,14 @@ public class TestFSM : MonoBehaviour
     [Range(0f, 180f)] public float attackSnapAngle = 100f;
     public float attackSnapRotateSpeed = 720f;
 
+    [Header("攻击伤害")]
+    [Tooltip("普通攻击/反击等武器命中伤害，与武器上 WeaponHitDetector 的 damage 保持一致")]
+    public float weaponDamage = 12f;
+    [Tooltip("上挑攻击每次命中伤害")]
+    public float attackUpDamage = 20f;
+    [Tooltip("空中攻击每次命中伤害")]
+    public float airAttackDamage = 15f;
+
     [Header("体力消耗")]
     public float dodgeStaminaCost = 15f;
     public float attackUpStaminaCost = 20f;
@@ -1063,6 +1071,12 @@ public class TestFSM : MonoBehaviour
 
     public void OnHitWindowOpen(string dirTag)
     {
+        float hitDamage = weaponDamage;
+        if (fsm.stateType == StateType.ATTACK_UP)
+            hitDamage = attackUpDamage;
+        else if (fsm.stateType == StateType.AIR_ATTACK)
+            hitDamage = airAttackDamage;
+        weaponHitDetector?.SetDamage(hitDamage);
         weaponHitDetector?.OnHitWindowOpen(dirTag);
 
         StateBase currentState = fsm.GetCurrentState();
